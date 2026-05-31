@@ -1,3 +1,51 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+npm run dev        # start dev server (Cloudflare workerd runtime)
+npm run build      # production build (SSR via @astrojs/cloudflare)
+npm run preview    # preview production build locally
+npm run lint       # ESLint with type-checked rules
+npm run lint:fix   # auto-fix lint issues
+npm run format     # Prettier (astro + tailwind plugins)
+npx astro sync     # regenerate type declarations (run after adding env vars or content collections)
+```
+
+There are no test scripts yet. Pre-commit hooks (husky + lint-staged) run `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
+
+For local Supabase: `npx supabase start` (requires Docker). Copy the printed credentials into `.env` and `.dev.vars`.
+
+## Architecture
+
+**Astro 6 SSR app** deployed to Cloudflare Workers. `output: "server"` in `astro.config.mjs` — every page is server-rendered. React 19 is used only for interactive islands (hydrated via `client:load` / `client:idle`). Use Astro components for layout and static content.
+
+### Auth
+
+- `src/lib/supabase.ts` — factory that creates a Supabase SSR client with cookie-based sessions (`@supabase/ssr`). Returns `null` when env vars are missing so the app degrades gracefully instead of crashing.
+- `src/middleware.ts` — runs on every request, attaches resolved user to `context.locals.user`. Add paths to `PROTECTED_ROUTES` to require auth.
+- API endpoints at `src/pages/api/auth/{signin,signup,signout}.ts` — form POST handlers that redirect on success/failure with error as a query param.
+- Env vars (`SUPABASE_URL`, `SUPABASE_KEY`) are declared via Astro's `env.schema` in `astro.config.mjs` as server-only secrets. Read them via `import { SUPABASE_URL, SUPABASE_KEY } from "astro:env/server"` — never from `process.env` directly.
+
+### Key conventions
+
+- **Path alias**: `@/*` → `./src/*` (tsconfig paths).
+- **Class merging**: always use `cn()` from `@/lib/utils` (clsx + tailwind-merge) — never concatenate class strings manually.
+- **shadcn/ui**: components live in `src/components/ui/`, "new-york" style. Add new ones with `npx shadcn@latest add [name]`.
+- **API routes**: export uppercase `GET`, `POST`, etc. Validate input with Zod.
+- **Supabase migrations**: `supabase/migrations/YYYYMMDDHHmmss_description.sql`. Always enable RLS on new tables with per-operation, per-role policies.
+- **React hooks**: extract to `src/components/hooks/`. No Next.js directives (`"use client"` etc.).
+- **Business logic**: `src/lib/` or `src/lib/services/`. Shared entity/DTO types go in `src/types.ts`.
+- **Config status**: `src/lib/config-status.ts` tracks missing env vars; `Layout.astro` renders error banners automatically for any unconfigured service.
+
+### Environment
+
+- `.env` — used by the Vite/Node dev path
+- `.dev.vars` — used by the Cloudflare workerd dev runtime (`npm run dev`); takes precedence for `wrangler`-driven commands
+- CI (`.github/workflows/ci.yml`) runs `astro sync → lint → build` on push/PR to `master`. Requires `SUPABASE_URL` and `SUPABASE_KEY` as GitHub repository secrets.
+
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
 ## 10xDevs AI Toolkit — Module 1, Lesson 5
