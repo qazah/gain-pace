@@ -260,22 +260,22 @@ Future migrations that depend on this schema must preserve `user_id REFERENCES a
 
 #### Automated
 
-- [x] 1.1 `npx supabase db reset` applies without errors
-- [x] 1.2 `npm run lint` passes (no regressions)
+- [x] 1.1 `npx supabase db reset` applies without errors — e3fac28
+- [x] 1.2 `npm run lint` passes (no regressions) — e3fac28
 
 #### Manual
 
-- [x] 1.3 All 3 tables visible in Supabase Studio with correct columns
-- [x] 1.4 4 RLS policies per table visible in Auth → Policies
-- [x] 1.5 Cross-user SELECT rejected (RLS test in SQL Editor)
+- [x] 1.3 All 3 tables visible in Supabase Studio with correct columns — e3fac28
+- [x] 1.4 4 RLS policies per table visible in Auth → Policies — e3fac28
+- [x] 1.5 Cross-user SELECT rejected (RLS test in SQL Editor) — e3fac28
 
 ### Phase 2: TypeScript Types
 
 #### Automated
 
-- [ ] 2.1 `src/types/database.ts` contains generated `Database` interface
-- [ ] 2.2 `npm run lint` passes with no errors in `src/lib/supabase.ts` or `src/types.ts`
+- [x] 2.1 `src/types/database.ts` contains generated `Database` interface
+- [x] 2.2 `npm run lint` passes with no errors in `src/lib/supabase.ts` or `src/types.ts`
 
 #### Manual
 
-- [ ] 2.3 IntelliSense shows typed column completions on `.from('race_goals').select(`
+- [x] 2.3 IntelliSense shows typed column completions on `.from('race_goals').select(`
