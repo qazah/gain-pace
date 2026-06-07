@@ -273,9 +273,9 @@ Future migrations that depend on this schema must preserve `user_id REFERENCES a
 
 #### Automated
 
-- [x] 2.1 `src/types/database.ts` contains generated `Database` interface
-- [x] 2.2 `npm run lint` passes with no errors in `src/lib/supabase.ts` or `src/types.ts`
+- [x] 2.1 `src/types/database.ts` contains generated `Database` interface — f9cb765
+- [x] 2.2 `npm run lint` passes with no errors in `src/lib/supabase.ts` or `src/types.ts` — f9cb765
 
 #### Manual
 
-- [x] 2.3 IntelliSense shows typed column completions on `.from('race_goals').select(`
+- [x] 2.3 IntelliSense shows typed column completions on `.from('race_goals').select(` — f9cb765
