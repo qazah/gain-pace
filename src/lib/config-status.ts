@@ -1,4 +1,10 @@
-import { SUPABASE_URL, SUPABASE_KEY } from "astro:env/server";
+import {
+  SUPABASE_URL,
+  SUPABASE_KEY,
+  GARMIN_SIDECAR_URL,
+  GARMIN_SIDECAR_SECRET,
+  GARMIN_PASSWORD_ENC_KEY,
+} from "astro:env/server";
 
 export interface ConfigStatus {
   name: string;
@@ -15,6 +21,11 @@ export const configStatuses: ConfigStatus[] = [
     message: "Supabase nie jest skonfigurowany — funkcje uwierzytelniania są wyłączone.",
     docsUrl: "https://github.com/przeprogramowani/10x-astro-starter#supabase-configuration",
     docsLabel: "Zobacz instrukcję konfiguracji",
+  },
+  {
+    name: "Garmin",
+    configured: Boolean(GARMIN_SIDECAR_URL && GARMIN_SIDECAR_SECRET && GARMIN_PASSWORD_ENC_KEY),
+    message: "Integracja z Garminem nie jest skonfigurowana — łączenie konta i pobieranie danych jest wyłączone.",
   },
 ];
 
