@@ -1,0 +1,30 @@
+{
+  "name": "gain-pace-garmin-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Off-edge Garmin sidecar for GainPace (S-01). Owns all Garmin I/O via garmin-connect-client; the Cloudflare Worker calls this over HTTPS with a shared bearer secret.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "garmin-connect-client": "^2.0.0",
+    "luxon": "^3.5.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/luxon": "^3.4.2",
+    "@types/node": "^20.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -558,16 +558,16 @@ This closes S-01.
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly against a local Supabase (`db reset`/`db push`)
-- [x] 1.2 `npx astro sync` succeeds with the new env vars
-- [x] 1.3 Type checking passes (`npx astro check`)
-- [x] 1.4 Linting passes (`npm run lint`)
-- [x] 1.5 Production build succeeds (`npm run build`)
+- [x] 1.1 Migration applies cleanly against a local Supabase (`db reset`/`db push`) — 23f8532
+- [x] 1.2 `npx astro sync` succeeds with the new env vars — 23f8532
+- [x] 1.3 Type checking passes (`npx astro check`) — 23f8532
+- [x] 1.4 Linting passes (`npm run lint`) — 23f8532
+- [x] 1.5 Production build succeeds (`npm run build`) — 23f8532
 
 #### Manual
 
-- [x] 1.6 Garmin config banner shows when env vars unset
-- [x] 1.7 New columns visible in local Supabase Studio
+- [x] 1.6 Garmin config banner shows when env vars unset — 23f8532
+- [x] 1.7 New columns visible in local Supabase Studio — 23f8532
 - [ ] 1.8 `encryptPassword`→`decryptPassword` round-trip returns original
 
 ### Phase 2: Garmin sidecar service (Koyeb)

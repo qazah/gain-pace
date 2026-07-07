@@ -70,7 +70,10 @@ const astroConfig = tseslint.config({
 
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
-  { ignores: ["src/types/database.ts"] },
+  // The Garmin sidecar (sidecar/) is a separate Node subproject with its own
+  // tsconfig; it is linted/typechecked on its own (see sidecar/package.json),
+  // not by the app's type-checked ESLint config.
+  { ignores: ["src/types/database.ts", "sidecar/**"] },
   baseConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],
