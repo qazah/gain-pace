@@ -582,10 +582,10 @@ This closes S-01.
 
 - [x] 2.4 `POST /garmin/login` returns session (or mfa_required + successful resume) on a real account
 - [x] 2.5 recovery / activities / scheduled-workout return plausible normalized data
-- [ ] 2.6 Deployed Koyeb service reachable over HTTPS with bearer; cold start 1–5 s
+- [x] 2.6 Deployed Cloud Run service reachable over HTTPS with bearer; cold start 1–5 s (scale-to-zero)
 - [x] 2.7 Second call reuses persisted session without re-login
 - [ ] 2.8 MFA resume survives a sidecar restart between the two login calls
-- [ ] 2.9 Unattended re-login from stored password alone verified (usable or dormant)
+- [x] 2.9 Unattended re-login from stored password alone verified (usable — account has no MFA; login returns ok directly)
 
 ### Phase 3: Worker ↔ sidecar integration
 

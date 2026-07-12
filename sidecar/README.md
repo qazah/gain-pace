@@ -164,15 +164,28 @@ the bearer secret is the only guard. If it leaks, it becomes an open Garmin-logi
 long random secret, stored as a Cloud Run secret (not in the image), rotated on suspicion of leak.
 Accepted for the MVP; revisit (e.g. restrict ingress) if the service is ever scaled up.
 
-## Points that need live verification (Phase 2 manual gate)
+## Live verification results (Phase 2 manual gate — done 2026-07-13)
 
-These are best-effort from the documented API and must be confirmed against a real account:
+Verified against a real Garmin account, both locally (Docker) and on the deployed Cloud Run service.
+Findings that shaped the current `src/` code:
 
-- **Raw `connectapi` headers** — Body Battery + calendar calls send `Authorization` + a `User-Agent`
-  + `NK: NT`. If a call `403`s, adjust the headers in `src/garmin.ts`.
-- **Sleep field names** — `sleepScore` / `avgOvernightHrv` / stage seconds are plucked defensively
-  from `dailySleepDTO`; confirm the exact fields your account returns.
-- **Calendar item shape** — `scheduled-workout` filters `calendarItems` by `date` + `itemType`
-  (`workout`/`scheduledWorkout`); confirm the real field names for a scheduled workout.
-- **Unattended re-login** — whether a fully-expired session can re-login from the stored password
-  *without* re-prompting MFA (gates the Phase 3 auto-re-login orchestration).
+- **Raw `connectapi` headers work.** `Authorization` + `User-Agent` + `NK: NT` on
+  `connectapi.garmin.com` return `200` for Body Battery, the calendar, and sleep — no `403`. The
+  plain OAuth2 bearer is accepted on this host (only `sso.garmin.com` is TLS-fingerprint blocked).
+- **Sleep is fetched via raw REST, not the library.** `client.sleep.getDailySleepData` zod-validates
+  a strict enum (`sleepNeed.trainingFeedback`) that Garmin extends server-side
+  (`TODAYS_LOAD_AND_CHRONIC`, unknown to the lib) → it throws and yields all-null. We call
+  `/sleep-service/sleep/dailySleepData?date=&nonSleepBufferMinutes=60` directly and pluck
+  defensively. **`avgOvernightHrv` is at the response root**, not under `dailySleepDTO`.
+- **Scheduled workouts use `itemType: "fbtAdaptiveWorkout"`.** Garmin Coach adaptive-plan workouts
+  (the common case) appear in `calendar-service` under this type with `workoutId: null` and the label
+  in `title`; the filter now matches it alongside `workout`/`scheduledWorkout`.
+- **The GraphQL gateway is NOT usable from the sidecar.** `connect.garmin.com/gc-api/graphql-gateway`
+  (`sleepSummariesScalar`, `workoutScheduleSummariesScalar`, `healthStatusSummary`) `403`s the OAuth2
+  bearer — it only works in-browser with cookies. All data stays on `connectapi.garmin.com` REST.
+- **Unattended re-login:** the test account has **no MFA**, so `login({username,password})` returns a
+  session directly — the encrypted-password re-login path is usable. Phase 3 still handles an
+  `mfa_required` response by surfacing a "reconnect Garmin" state (for MFA-enabled accounts).
+- **MFA-across-restart (row 2.8): not exercised** — the test account has no MFA challenge to resume.
+  The `pending` blob (`{ mfaRequired: true, cookies }`) is self-contained by construction, so resume
+  across a scale-to-zero restart should hold; confirm if an MFA-enabled account becomes available.
