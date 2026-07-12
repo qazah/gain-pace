@@ -92,8 +92,9 @@ interface RawSleep {
     lightSleepSeconds?: number | null;
     remSleepSeconds?: number | null;
     sleepTimeSeconds?: number | null;
-    avgOvernightHrv?: number | null;
   };
+  // avgOvernightHrv sits at the RESPONSE ROOT, not inside dailySleepDTO.
+  avgOvernightHrv?: number | null;
 }
 
 interface RawBodyBattery {
@@ -130,12 +131,18 @@ dataRouter.post(
  */
 dataRouter.post(
   "/recovery",
-  withSession(async ({ session, client }, req) => {
+  withSession(async ({ session }, req) => {
     const date = typeof req.query.date === "string" ? req.query.date : todayIso();
 
-    const sleepRaw = (await client.sleep
-      .getDailySleepData(validDate(date))
-      .catch(() => null)) as RawSleep | null;
+    // Raw REST (not client.sleep.getDailySleepData): the library zod-validates the
+    // sleep payload against a strict enum (e.g. sleepNeed.trainingFeedback) that
+    // Garmin extends server-side ("TODAYS_LOAD_AND_CHRONIC"), so the typed call
+    // throws on drift and silently yields null. The raw endpoint returns the same
+    // data; we pluck defensively so a new field never breaks recovery.
+    const sleepRaw = await connectApiGet<RawSleep>(
+      session,
+      `/sleep-service/sleep/dailySleepData?date=${date}&nonSleepBufferMinutes=60`,
+    ).catch(() => null);
     const dto = sleepRaw?.dailySleepDTO;
 
     let bodyBattery: { current: number | null; high: number | null; low: number | null } = {
@@ -169,7 +176,7 @@ dataRouter.post(
         deepSleepSeconds: dto?.deepSleepSeconds ?? null,
         lightSleepSeconds: dto?.lightSleepSeconds ?? null,
         remSleepSeconds: dto?.remSleepSeconds ?? null,
-        overnightHrv: dto?.avgOvernightHrv ?? null,
+        overnightHrv: sleepRaw?.avgOvernightHrv ?? null,
         bodyBattery,
       },
     };
@@ -180,9 +187,20 @@ interface RawCalendarItem {
   itemType?: string;
   date?: string;
   title?: string;
-  workoutId?: number | string;
+  workoutId?: number | string | null;
   id?: number | string;
+  sportTypeKey?: string | null;
+  trainingPlanId?: number | string | null;
 }
+
+/**
+ * Calendar itemTypes that represent a scheduled workout. `fbtAdaptiveWorkout` is
+ * the Garmin Coach adaptive-plan workout — the common case for runners on a plan,
+ * and the one the calendar filter originally missed (it has workoutId: null and
+ * carries its label in `title`). `workout`/`scheduledWorkout` cover manually
+ * scheduled structured workouts.
+ */
+const SCHEDULED_WORKOUT_TYPES = new Set(["workout", "scheduledWorkout", "fbtAdaptiveWorkout"]);
 interface RawCalendar {
   calendarItems?: RawCalendarItem[];
 }
@@ -202,18 +220,18 @@ dataRouter.post(
 
     const calendar = await connectApiGet<RawCalendar>(session, `/calendar-service/year/${year}/month/${month0}`);
     const items = calendar.calendarItems ?? [];
-    const match = items.find(
-      (it) => it.date === date && (it.itemType === "workout" || it.itemType === "scheduledWorkout"),
-    );
+    const match = items.find((it) => it.date === date && SCHEDULED_WORKOUT_TYPES.has(it.itemType ?? ""));
 
     if (!match) {
       return { workout: null };
     }
     return {
       workout: {
-        id: String(match.workoutId ?? match.id ?? ""),
+        // Adaptive-plan workouts have no workoutId; fall back to the calendar item id.
+        id: match.workoutId != null ? String(match.workoutId) : match.id != null ? String(match.id) : null,
         title: match.title ?? null,
         date: match.date ?? date,
+        sportType: match.sportTypeKey ?? null,
       },
     };
   }),

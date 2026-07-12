@@ -574,16 +574,16 @@ This closes S-01.
 
 #### Automated
 
-- [ ] 2.1 Sidecar builds (`docker build`, native addon compiles)
-- [ ] 2.2 Sidecar `401`s unauthenticated; `200`s health check with secret
-- [x] 2.3 Sidecar TypeScript compiles / lints
+- [x] 2.1 Sidecar builds (`docker build`, native addon compiles)
+- [x] 2.2 Sidecar `401`s unauthenticated; `200`s health check with secret
+- [x] 2.3 Sidecar TypeScript compiles / lints — 85ec381
 
 #### Manual
 
-- [ ] 2.4 `POST /garmin/login` returns session (or mfa_required + successful resume) on a real account
-- [ ] 2.5 recovery / activities / scheduled-workout return plausible normalized data
+- [x] 2.4 `POST /garmin/login` returns session (or mfa_required + successful resume) on a real account
+- [x] 2.5 recovery / activities / scheduled-workout return plausible normalized data
 - [ ] 2.6 Deployed Koyeb service reachable over HTTPS with bearer; cold start 1–5 s
-- [ ] 2.7 Second call reuses persisted session without re-login
+- [x] 2.7 Second call reuses persisted session without re-login
 - [ ] 2.8 MFA resume survives a sidecar restart between the two login calls
 - [ ] 2.9 Unattended re-login from stored password alone verified (usable or dormant)
 

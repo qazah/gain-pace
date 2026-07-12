@@ -6,9 +6,11 @@
 FROM node:20-bookworm-slim
 
 # Build toolchain + libcurl dev headers for the native node-libcurl-ja3 addon.
+# git is required at install time: node-libcurl-ja3 pulls `nan` from a GitHub
+# ref (github:JCMais/nan#fix/electron-failures), which npm fetches via git.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-     build-essential python3 pkg-config libcurl4-openssl-dev ca-certificates \
+     build-essential python3 pkg-config libcurl4-openssl-dev ca-certificates git \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
