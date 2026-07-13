@@ -607,9 +607,9 @@ This closes S-01.
 
 #### Automated
 
-- [x] 4.1 Build succeeds with new islands (`npm run build`)
-- [x] 4.2 Linting passes (`npm run lint`)
-- [x] 4.3 Type checking passes (`npx astro check`)
+- [x] 4.1 Build succeeds with new islands (`npm run build`) — e8efe26
+- [x] 4.2 Linting passes (`npm run lint`) — e8efe26
+- [x] 4.3 Type checking passes (`npx astro check`) — e8efe26
 
 #### Manual
 
