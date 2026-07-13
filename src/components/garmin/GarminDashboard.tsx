@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Activity, BatteryMedium, CalendarCheck, HeartPulse, Moon, TriangleAlert } from "lucide-react";
+import { Activity, BatteryMedium, CalendarCheck, HeartPulse, Moon, RefreshCw, TriangleAlert } from "lucide-react";
 import type { GarminActivity, GarminDashboardData, GarminRecovery } from "@/types";
 import ConnectGarmin from "./ConnectGarmin";
 import ManualWorkoutEntry from "./ManualWorkoutEntry";
@@ -39,10 +39,20 @@ function Metric({ icon, label, value }: { icon: ReactNode; label: string; value:
 }
 
 function RecoveryCard({ recovery }: { recovery: GarminRecovery | null }) {
+  // Garmin has no data for a day until the watch syncs it (e.g. today's sleep
+  // before the morning sync). `recovery` is non-null but every metric is null —
+  // prompt a sync instead of showing a card full of dashes.
+  const hasData =
+    recovery != null &&
+    (recovery.sleepScore != null ||
+      recovery.overnightHrv != null ||
+      recovery.sleepDurationSeconds != null ||
+      recovery.bodyBattery.current != null);
+
   return (
     <section>
       <h3 className="mb-3 text-sm font-semibold tracking-wide text-blue-100/80 uppercase">Recovery</h3>
-      {recovery ? (
+      {hasData ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Metric
             icon={<Moon className="size-3.5" />}
@@ -61,7 +71,10 @@ function RecoveryCard({ recovery }: { recovery: GarminRecovery | null }) {
           />
         </div>
       ) : (
-        <p className="text-sm text-blue-100/50">No recovery data available for today.</p>
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-blue-100/60">
+          <RefreshCw className="size-4 shrink-0 text-purple-300" />
+          No recovery data for today yet — sync your Garmin watch to see sleep, HRV, and Body Battery.
+        </div>
       )}
     </section>
   );

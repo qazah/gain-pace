@@ -140,7 +140,7 @@ async function persistSession(
   extra?: { username?: string; encryptedPassword?: string },
 ): Promise<void> {
   const token = session.oauth2Token;
-  await supabase.from("garmin_credentials").upsert(
+  const { error } = await supabase.from("garmin_credentials").upsert(
     {
       user_id: userId,
       access_token: token.access_token,
@@ -153,6 +153,12 @@ async function persistSession(
     },
     { onConflict: "user_id" },
   );
+  // Surface a persist failure instead of letting connect falsely report "ok"
+  // (a missing table GRANT once made this fail silently — see migration
+  // 20260713000001_grant_domain_tables_to_authenticated.sql).
+  if (error) {
+    throw new GarminError(`failed to persist Garmin session: ${error.message}`);
+  }
 }
 
 // ---- Connect / MFA ----
