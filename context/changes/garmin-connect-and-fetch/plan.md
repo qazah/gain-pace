@@ -568,7 +568,7 @@ This closes S-01.
 
 - [x] 1.6 Garmin config banner shows when env vars unset — 23f8532
 - [x] 1.7 New columns visible in local Supabase Studio — 23f8532
-- [ ] 1.8 `encryptPassword`→`decryptPassword` round-trip returns original
+- [x] 1.8 `encryptPassword`→`decryptPassword` round-trip returns original — 23036cd (Vitest test)
 
 ### Phase 2: Garmin sidecar service (Koyeb)
 
@@ -599,9 +599,9 @@ This closes S-01.
 
 #### Manual
 
-- [ ] 3.6 `POST /api/garmin/connect` persists session + encrypted password in `garmin_credentials`
-- [ ] 3.7 `GET /api/garmin/data` returns live data
-- [ ] 3.8 Sidecar stopped → `GET /api/garmin/data` returns cached snapshot with `stale:true`
+- [x] 3.6 `POST /api/garmin/connect` persists session + encrypted password in `garmin_credentials` — 23036cd
+- [x] 3.7 `GET /api/garmin/data` returns live data — 23036cd
+- [x] 3.8 Sidecar stopped → `GET /api/garmin/data` returns cached snapshot with `stale:true` — 23036cd
 
 ### Phase 4: UI — connect flow, dashboard display, fallbacks
 
@@ -613,8 +613,8 @@ This closes S-01.
 
 #### Manual
 
-- [ ] 4.4 End-to-end connect (incl. MFA) → dashboard shows recovery + activities + today's workout
-- [ ] 4.5 No scheduled workout → manual-entry field appears
-- [ ] 4.6 Sidecar down → "Garmin unavailable / reconnect" with last-good data, no crash
-- [ ] 4.7 Operations > 2 s show visible progress (cold-start spinner/skeleton)
-- [ ] 4.8 No regression for a user who hasn't connected Garmin
+- [x] 4.4 End-to-end connect (incl. MFA) → dashboard shows recovery + activities + today's workout — 23036cd (no-MFA account)
+- [x] 4.5 No scheduled workout → manual-entry field appears — 23036cd
+- [x] 4.6 Sidecar down → "Garmin unavailable / reconnect" with last-good data, no crash — 23036cd
+- [x] 4.7 Operations > 2 s show visible progress (cold-start spinner/skeleton) — 23036cd
+- [x] 4.8 No regression for a user who hasn't connected Garmin — 23036cd
