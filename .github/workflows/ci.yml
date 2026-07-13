@@ -22,3 +22,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      # Runs with NO Garmin secret present — the service tests mock the sidecar.
+      - run: npm test
