@@ -591,11 +591,11 @@ This closes S-01.
 
 #### Automated
 
-- [x] 3.1 Service unit tests pass against mocked sidecar (`npm test`)
-- [x] 3.2 Type checking passes (`npx astro check`)
-- [x] 3.3 Linting passes (`npm run lint`)
-- [x] 3.4 Build succeeds (`npm run build`)
-- [x] 3.5 CI runs astro sync → lint → build → test with no Garmin secret
+- [x] 3.1 Service unit tests pass against mocked sidecar (`npm test`) — 3ba17f9
+- [x] 3.2 Type checking passes (`npx astro check`) — 3ba17f9
+- [x] 3.3 Linting passes (`npm run lint`) — 3ba17f9
+- [x] 3.4 Build succeeds (`npm run build`) — 3ba17f9
+- [x] 3.5 CI runs astro sync → lint → build → test with no Garmin secret — 3ba17f9
 
 #### Manual
 
@@ -607,9 +607,9 @@ This closes S-01.
 
 #### Automated
 
-- [ ] 4.1 Build succeeds with new islands (`npm run build`)
-- [ ] 4.2 Linting passes (`npm run lint`)
-- [ ] 4.3 Type checking passes (`npx astro check`)
+- [x] 4.1 Build succeeds with new islands (`npm run build`)
+- [x] 4.2 Linting passes (`npm run lint`)
+- [x] 4.3 Type checking passes (`npx astro check`)
 
 #### Manual
 
