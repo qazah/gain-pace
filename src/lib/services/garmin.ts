@@ -81,11 +81,19 @@ async function callSidecar(path: string, init: RequestInit): Promise<Record<stri
     const headers = new Headers(init.headers);
     headers.set("Content-Type", "application/json");
     headers.set("Authorization", `Bearer ${GARMIN_SIDECAR_SECRET}`);
-    const res = await fetch(`${GARMIN_SIDECAR_URL}${path}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${GARMIN_SIDECAR_URL}${path}`, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      // Abort (cold-start timeout) / network failure → a stable GarminError so
+      // routes map it to 502 rather than a bare 500.
+      const timedOut = err instanceof Error && err.name === "AbortError";
+      throw new GarminError(timedOut ? "sidecar timed out" : "sidecar was unreachable");
+    }
     // The contract returns a JSON `{ status, ... }` body on 2xx AND on 4xx/5xx
     // (invalid_credentials, not_authenticated, garmin_error). Read it regardless.
     const json = (await res.json().catch(() => null)) as Record<string, unknown> | null;
@@ -105,7 +113,9 @@ function callData(path: string, session: PersistedSession): Promise<Record<strin
 // ---- Persistence helpers ----
 
 function isPending(session: unknown): session is MfaPending {
-  return typeof session === "object" && session !== null && (session as { mfaRequired?: unknown }).mfaRequired === true;
+  if (typeof session !== "object" || session === null) return false;
+  const s = session as { mfaRequired?: unknown; cookies?: unknown };
+  return s.mfaRequired === true && typeof s.cookies === "string";
 }
 
 /** Best-effort expiry as ISO for the scalar `expires_at` column (used only for quick checks). */
@@ -165,7 +175,10 @@ export async function connectGarmin(
     return { status: "invalid_credentials" };
   }
   if (res.status === "mfa_required") {
-    const pending = res.pending as MfaPending;
+    const pending = res.pending;
+    if (!isPending(pending)) {
+      throw new GarminError("sidecar returned mfa_required without a valid pending blob");
+    }
     await supabase.from("garmin_credentials").upsert(
       {
         user_id: userId,
@@ -291,13 +304,15 @@ export async function getDashboardData(
 
   const d = date ?? todayIso();
   try {
-    const recRes = await fetchData(supabase, userId, row, `/garmin/recovery?date=${d}`);
-    // Recovery may have re-logged-in; reuse the freshest session for the rest.
-    const currentSession = (recRes.session as PersistedSession | undefined) ?? row.session_data;
-    const rowForRest: CredRow = { ...row, session_data: currentSession as CredRow["session_data"] };
+    const recRes = await fetchData(supabase, userId, row, `/garmin/recovery?date=${encodeURIComponent(d)}`);
+    // Recovery may have re-logged-in (or the sidecar may have rotated tokens),
+    // persisting a fresh session. Reload the row so activities + scheduled reuse
+    // the live session — otherwise both would retry against the now-dead session
+    // and each trigger its own re-login (up to 3 Garmin logins for one load).
+    const rowForRest: CredRow = (await loadRow(supabase, userId)) ?? row;
     const [actRes, schRes] = await Promise.all([
       fetchData(supabase, userId, rowForRest, `/garmin/activities?limit=4`),
-      fetchData(supabase, userId, rowForRest, `/garmin/scheduled-workout?date=${d}`),
+      fetchData(supabase, userId, rowForRest, `/garmin/scheduled-workout?date=${encodeURIComponent(d)}`),
     ]);
 
     const data: GarminDashboardData = {
@@ -316,9 +331,13 @@ export async function getDashboardData(
       .eq("user_id", userId);
     return data;
   } catch (err) {
+    // A dead session that can't be silently recovered still surfaces the
+    // reconnect CTA even when we can serve a cached snapshot (stale data +
+    // reconnect prompt coexist — the UI shows both).
+    const reconnectRequired = err instanceof ReconnectRequiredError;
     const cached = row.last_snapshot as GarminDashboardData | null;
     if (cached) {
-      return { ...cached, connected: true, stale: true };
+      return { ...cached, connected: true, stale: true, ...(reconnectRequired ? { reconnectRequired: true } : {}) };
     }
     return {
       connected: true,
@@ -326,7 +345,7 @@ export async function getDashboardData(
       activities: [],
       scheduledWorkout: null,
       stale: true,
-      ...(err instanceof ReconnectRequiredError ? { reconnectRequired: true } : {}),
+      ...(reconnectRequired ? { reconnectRequired: true } : {}),
     };
   }
 }

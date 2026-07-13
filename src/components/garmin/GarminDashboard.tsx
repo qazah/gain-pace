@@ -100,21 +100,17 @@ function ActivitiesCard({ activities }: { activities: GarminActivity[] }) {
 }
 
 export default function GarminDashboard({ data, onReconnect }: Props) {
-  if (data.reconnectRequired) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
-          <TriangleAlert className="size-4 shrink-0" />
-          Your Garmin session expired and couldn&apos;t be renewed automatically. Please reconnect.
-        </div>
-        <ConnectGarmin reconnect onConnected={onReconnect} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {data.stale ? (
+      {data.reconnectRequired ? (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
+            <TriangleAlert className="size-4 shrink-0" />
+            Your Garmin session expired and couldn&apos;t be renewed automatically. Reconnect to refresh your data.
+          </div>
+          <ConnectGarmin reconnect onConnected={onReconnect} />
+        </div>
+      ) : data.stale ? (
         <div className="flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
           <TriangleAlert className="size-4 shrink-0" />
           Garmin is unavailable right now — showing your last synced data, which may be out of date.

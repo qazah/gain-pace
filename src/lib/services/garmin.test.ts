@@ -240,4 +240,21 @@ describe("getDashboardData", () => {
     expect(data.recovery).toEqual(RECOVERY);
     expect(data.activities).toEqual([ACTIVITY]);
   });
+
+  it("flags reconnectRequired when a dead session hits an MFA re-challenge on re-login", async () => {
+    const encrypted = await encryptPassword("pw");
+    const db = makeSupabase(
+      makeRow({ session_data: SESSION, garmin_user_id: "runner@x.com", garmin_password_encrypted: encrypted }),
+    );
+    fetchMock
+      .mockResolvedValueOnce(reply({ status: "not_authenticated" }, 401)) // recovery attempt 1
+      .mockResolvedValueOnce(reply({ status: "mfa_required", pending: { mfaRequired: true, cookies: "c" } })); // re-login re-challenged
+
+    const data = await getDashboardData(db.client, "u1", "2026-07-12");
+
+    expect(data.connected).toBe(true);
+    expect(data.stale).toBe(true);
+    expect(data.reconnectRequired).toBe(true);
+    expect(data.recovery).toBeNull();
+  });
 });

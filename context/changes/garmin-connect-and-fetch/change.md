@@ -1,7 +1,7 @@
 ---
 change_id: garmin-connect-and-fetch
 title: Connect Garmin account and fetch today's workout + recent activity data live
-status: implemented
+status: impl_reviewed
 created: 2026-06-14
 updated: 2026-07-13
 archived_at: null

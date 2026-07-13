@@ -1,6 +1,9 @@
 import type { APIRoute } from "astro";
+import { z } from "astro/zod";
 import { createClient } from "@/lib/supabase";
 import { getDashboardData } from "@/lib/services/garmin";
+
+const dateParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 /**
  * GET /api/garmin/data — the dashboard's Garmin payload:
@@ -24,7 +27,16 @@ export const GET: APIRoute = async (context) => {
     return json({ status: "not_configured", message: "Supabase is not configured" }, 503);
   }
 
-  const date = new URL(context.request.url).searchParams.get("date") ?? undefined;
+  const rawDate = new URL(context.request.url).searchParams.get("date");
+  let date: string | undefined;
+  if (rawDate !== null) {
+    const parsed = dateParam.safeParse(rawDate);
+    if (!parsed.success) {
+      return json({ status: "bad_request", issues: z.treeifyError(parsed.error) }, 400);
+    }
+    date = parsed.data;
+  }
+
   const data = await getDashboardData(supabase, context.locals.user.id, date);
   return json(data);
 };
