@@ -3,7 +3,7 @@ project: "GainPace"
 version: 1
 status: draft
 created: 2026-06-04
-updated: 2026-06-04
+updated: 2026-07-13
 prd_version: 1
 main_goal: market-feedback
 top_blocker: external
@@ -32,7 +32,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | ID   | Change ID                    | Outcome (user can …)                                                                                                             | Prerequisites | PRD refs                      | Status   |
 | ---- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- | -------- |
 | F-01 | domain-schema                | (foundation) domain tables in Supabase with RLS enabled per user                                                                 | —             | FR-001, FR-007, FR-008        | ready    |
-| S-01 | garmin-connect-and-fetch     | connect their Garmin account and see today's scheduled workout + recent activity data fetched live                               | F-01          | FR-001, FR-002, FR-003, US-01 | blocked  |
+| S-01 | garmin-connect-and-fetch     | connect their Garmin account and see today's scheduled workout + recent activity data fetched live                               | F-01          | FR-001, FR-002, FR-003, US-01 | done     |
 | S-02 | race-goal-setup              | define their long-term race goal (event, date, distance, target time)                                                            | F-01          | FR-008, US-01                 | ready    |
 | S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | proposed |
 | S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | proposed |
@@ -83,11 +83,11 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Prerequisites:** F-01
 - **Parallel with:** S-02
 - **Blockers:** —
-- **Unknowns:**
-  - No official Garmin API exists. The `garminconnect` Python library (noted in shape-notes) does not run in a Cloudflare Workers JS edge runtime. The viable JS/TS approach — community JS wrapper, raw HTTP against Garmin Connect endpoints, or a thin proxy service — must be identified and validated before implementation. — Owner: user. Block: yes.
-  - PRD Open Question 1: what does the app show when the runner has no active Garmin Coach training plan? FR-003 ("view today's scheduled workout") cannot be designed without a decision on the no-plan fallback UX. — Owner: user. Block: yes.
-- **Risk:** Highest-risk slice in the roadmap — the entire product hypothesis depends on live Garmin data being fetchable from a JS edge runtime. The unofficial API is explicitly fragile per FR-001 Socrates note: "one server-side change breaks the integration." Sequenced first (as north star) so this risk is discovered before any investment in downstream AI or UI slices.
-- **Status:** blocked
+- **Unknowns:** (both resolved during `/10x-plan`, 2026-06-15 — see `context/changes/garmin-connect-and-fetch/plan.md`)
+  - ~~No official Garmin API; the viable JS/TS approach must be identified.~~ **Resolved:** Garmin-from-Workers is falsified (March-2026 Cloudflare TLS fingerprinting blocks all non-browser TLS, incl. Workers). Chosen approach: an off-edge **sidecar** on Koyeb (Free) running `garmin-connect-client` v2.0.0 for login + token refresh, owning all Garmin I/O behind a clean JSON API the Worker calls over HTTPS.
+  - ~~PRD Open Question 1: no-plan fallback UX.~~ **Resolved:** there is no clean "today's Garmin Coach suggested workout" endpoint; show the manually-scheduled calendar workout when present, else fall back to manual entry of today's planned workout.
+- **Risk:** Highest-risk slice in the roadmap — the entire product hypothesis depends on live Garmin data being fetchable. The unofficial API is explicitly fragile per FR-001 Socrates note: "one server-side change breaks the integration." Mitigated in the plan via graceful degradation + last-good snapshot cache; the headless-browser auth path is kept as a documented plan-B.
+- **Status:** done
 
 ### S-02: Race goal setup
 
@@ -131,16 +131,16 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | Roadmap ID | Change ID                    | Suggested issue title                                                              | Ready for `/10x-plan` | Notes                                                          |
 | ---------- | ---------------------------- | ---------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------- |
 | F-01       | domain-schema                | [GainPace] Domain schema: race_goals, workout_selections, garmin_credentials (RLS) | yes                   | Run `/10x-plan domain-schema`                                  |
-| S-01       | garmin-connect-and-fetch     | [GainPace] Garmin OAuth connect + live data fetch (north star)                     | no                    | Blocked: resolve JS/TS Garmin API approach + no-plan fallback  |
+| S-01       | garmin-connect-and-fetch     | [GainPace] Garmin OAuth connect + live data fetch (north star)                     | yes (planned)         | Planned 2026-06-15 — sidecar (Koyeb) + manual-entry fallback. Run `/10x-implement garmin-connect-and-fetch phase 1` |
 | S-02       | race-goal-setup              | [GainPace] Race goal setup form + persistence                                      | yes                   | Run `/10x-plan race-goal-setup`; can start in parallel         |
 | S-03       | modifier-to-recommendation-loop | [GainPace] Modifier screen → AI recommendation loop → workout selection          | no                    | Proposed: S-01 + S-02 must ship first                         |
 | S-04       | training-arc-context         | [GainPace] Training arc one-liner per AI recommendation                            | no                    | Proposed: S-03 must ship first                                 |
 
 ## Open Roadmap Questions
 
-1. **Co się dzieje gdy runner nie ma aktywnego planu Garmin Coach?** FR-003 opisuje widok dzisiejszego treningu z planu Garmin. Jeśli runner nie korzysta z Garmin Coach lub nie ma aktywnego planu, główne założenie produktu — modyfikowanie zaplanowanego treningu — traci grunt. Opcje do rozważenia: (a) UI zastępczy z prośbą o ręczne wpisanie planowanego treningu; (b) ograniczenie MVP do użytkowników z aktywnym Garmin Coach; (c) reframowanie jako "zaplanuj trening na dziś na podstawie historii aktywności". Decyzja blokuje projekt UX S-01 i S-03. — Owner: user. Block: S-01, S-03.
+1. ~~**Co się dzieje gdy runner nie ma aktywnego planu Garmin Coach?**~~ **ROZWIĄZANE (2026-06-15, `/10x-plan` S-01).** Nie istnieje czysty endpoint na "dzisiejszy sugerowany trening z Garmin Coach" — niezawodnie pobieralne są tylko ręcznie zaplanowane treningi z kalendarza. Decyzja: wybrano opcję (a) — pokaż trening z kalendarza gdy istnieje, w przeciwnym razie fallback do ręcznego wpisania dzisiejszego planu. Szczegóły: `context/changes/garmin-connect-and-fetch/plan.md` (Faza 4).
 
-2. **Jak wywoływać Garmin Connect API z JS/TS na Cloudflare Workers?** Brak oficjalnego API; biblioteka `garminconnect` w Pythonie (wymieniona w shape-notes) nie działa w edge runtimie. Opcje do zbadania: community JS wrapper, bezpośrednie wywołania HTTP (reverse-engineered Garmin Connect endpoints), cienki Python proxy serwis utrzymywany obok, lub Strava API jako fallback (bez sleep/HRV). Decyzja blokuje implementację S-01 i całą oś Streamu A. — Owner: user. Block: S-01.
+2. ~~**Jak wywoływać Garmin Connect API z JS/TS na Cloudflare Workers?**~~ **ROZWIĄZANE (2026-06-15, `/10x-plan` S-01).** Garmin-z-Workerów jest niewykonalne — od marca 2026 Garmin SSO jest za fingerprintingiem TLS (JA3/JA4) Cloudflare, który blokuje każdy nie-przeglądarkowy klient TLS (w tym `fetch()` Workera). Decyzja: osobny **sidecar** poza edge (Koyeb Free) z `garmin-connect-client` v2.0.0 robi login + odświeżanie tokenów i obsługuje całe I/O Garmina za czystym JSON API; Worker woła tylko sidecar przez HTTPS. Szczegóły: `context/changes/garmin-connect-and-fetch/plan.md`.
 
 ## Parked
 
@@ -152,4 +152,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
-(Empty on first generation. `/10x-archive` appends an entry here — and flips that item's `Status` to `done` — when a change whose `Change ID` matches a roadmap item is archived.)
+- **S-01: runner can connect their Garmin account via OAuth and see today's scheduled workout from their Garmin training plan alongside recent activity data — last 3–4 workouts, plus recovery metrics (sleep quality, HRV, Body Battery) — fetched live.** — Archived 2026-07-13 → `context/archive/2026-06-14-garmin-connect-and-fetch/`. Lesson: —.
