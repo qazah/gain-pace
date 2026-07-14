@@ -34,7 +34,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | F-01 | domain-schema                | (foundation) domain tables in Supabase with RLS enabled per user                                                                 | —             | FR-001, FR-007, FR-008        | ready    |
 | S-01 | garmin-connect-and-fetch     | connect their Garmin account and see today's scheduled workout + recent activity data fetched live                               | F-01          | FR-001, FR-002, FR-003, US-01 | done     |
 | S-02 | race-goal-setup              | define their long-term race goal (event, date, distance, target time)                                                            | F-01          | FR-008, US-01                 | done     |
-| S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | proposed |
+| S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | done     |
 | S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | proposed |
 
 ## Streams
@@ -112,7 +112,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - AI safety guardrail: the PRD requires that the AI must not recommend a volume or intensity implausible given the runner's last 3–4 logged activities. The prompt design and structured output validation approach for this guardrail must be decided before implementation to avoid shipping a hard regression. — Owner: user. Block: no.
 - **Risk:** This slice integrates all upstream data — Garmin activity and recovery data, race goal, and real-time modifiers — into a single LLM call with structured output. The 10-second p95 NFR applies directly to this call. The riskiest failure mode is prompt-induced hallucination: a recommendation that sounds plausible but violates the guardrail (e.g., prescribing 30 km for a 5 km/week runner). Sequenced after S-01 and S-02 so both data sources are available in the prompt.
-- **Status:** proposed
+- **Status:** done
 
 ### S-04: Training arc context per recommendation
 
@@ -154,3 +154,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **S-01: runner can connect their Garmin account via OAuth and see today's scheduled workout from their Garmin training plan alongside recent activity data — last 3–4 workouts, plus recovery metrics (sleep quality, HRV, Body Battery) — fetched live.** — Archived 2026-07-13 → `context/archive/2026-06-14-garmin-connect-and-fetch/`. Lesson: —.
 - **S-02: runner can define their long-term race goal — event name, event date, target distance, and target finish time — stored per account and retrievable as AI context.** — Archived 2026-07-14 → `context/archive/2026-07-14-race-goal-setup/`. Lesson: —.
+- **S-03: runner can set today's modifiers (Time available / Intensity preference / Feeling), receive a primary AI-recommended workout card plus 2 alternatives — each with a plain-language explanation grounded in their Garmin recovery metrics and active modifiers — and select one as today's committed workout; the whole flow completes within 3 user actions on the modifier screen.** — Archived 2026-07-14 → `context/archive/2026-07-14-modifier-to-recommendation-loop/`. Lesson: —.

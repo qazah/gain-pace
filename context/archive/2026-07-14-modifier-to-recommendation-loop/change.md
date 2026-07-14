@@ -1,10 +1,10 @@
 ---
 change_id: modifier-to-recommendation-loop
 title: Modifier screen → AI recommendation loop → workout selection
-status: implemented
+status: archived
 created: 2026-07-14
 updated: 2026-07-14
-archived_at: null
+archived_at: 2026-07-14T21:55:54Z
 ---
 
 ## Notes
