@@ -4,6 +4,18 @@ export type RaceGoal = Database["public"]["Tables"]["race_goals"]["Row"];
 export type GarminCredentials = Database["public"]["Tables"]["garmin_credentials"]["Row"];
 export type WorkoutSelection = Database["public"]["Tables"]["workout_selections"]["Row"];
 
+// ---- Race goal request DTO (S-02) ----
+// The shape the race-goal API + service accept when a runner saves a goal.
+// Kept separate from the RaceGoal Row type (no id/user_id/is_active/timestamps).
+
+export interface RaceGoalInput {
+  event_name: string;
+  /** ISO calendar date, YYYY-MM-DD. */
+  event_date: string;
+  distance_km: number;
+  target_finish_seconds: number;
+}
+
 // ---- Garmin normalized DTOs (S-01) ----
 // These mirror the sidecar's normalized JSON (see sidecar/src/routes/data.ts),
 // NOT Garmin's raw payloads. The service and the UI share this one contract.
