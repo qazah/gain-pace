@@ -303,29 +303,29 @@ One new migration: `recommendation_usage` (daily cap) with RLS + `authenticated`
 
 #### Automated
 
-- [x] 2.1 Types regenerate: `npx astro sync`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Production build passes: `npm run build`
+- [x] 2.1 Types regenerate: `npx astro sync` — f259f0e
+- [x] 2.2 Linting passes: `npm run lint` — f259f0e
+- [x] 2.3 Production build passes: `npm run build` — f259f0e
 
 #### Manual
 
-- [x] 2.4 POST select persists the chosen alternative as today's single row; re-select updates the same row
-- [x] 2.5 GET select returns today's selection (or null)
-- [x] 2.6 Unauthenticated returns 401
+- [x] 2.4 POST select persists the chosen alternative as today's single row; re-select updates the same row — f259f0e
+- [x] 2.5 GET select returns today's selection (or null) — f259f0e
+- [x] 2.6 Unauthenticated returns 401 — f259f0e
 
 ### Phase 3: Frontend — modifier → recommendation → selection island
 
 #### Automated
 
-- [ ] 3.1 Types regenerate: `npx astro sync`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Production build passes: `npm run build`
+- [x] 3.1 Types regenerate: `npx astro sync`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Production build passes: `npm run build`
 
 #### Manual
 
-- [ ] 3.4 Gating: CTA when goal/Garmin missing; modifier form when both present
-- [ ] 3.5 Modifiers → skeleton → primary + 2 alternatives (primary visually distinct), within ≤3 actions
-- [ ] 3.6 Select commits today's single row; committed state renders
-- [ ] 3.7 Regenerate works; past the cap shows the friendly rate-limit message
-- [ ] 3.8 Induced AI error shows error + Retry (no fabricated workout)
-- [ ] 3.9 No-recovery day still recommends with the reduced-confidence note
+- [x] 3.4 Gating: CTA when goal/Garmin missing; modifier form when both present
+- [x] 3.5 Modifiers → skeleton → primary + 2 alternatives (primary visually distinct), within ≤3 actions
+- [x] 3.6 Select commits today's single row; committed state renders
+- [x] 3.7 Regenerate works; past the cap shows the friendly rate-limit message
+- [x] 3.8 Induced AI error shows error + Retry (no fabricated workout)
+- [x] 3.9 No-recovery day still recommends with the reduced-confidence note

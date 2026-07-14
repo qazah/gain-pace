@@ -1,5 +1,6 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import RecommendationSection from "@/components/recommendations/RecommendationSection";
 import RaceGoalSection from "@/components/race-goals/RaceGoalSection";
 import GarminSection from "@/components/garmin/GarminSection";
 
@@ -33,6 +34,7 @@ const { user } = Astro.locals;
       </div>
 
       <div class="space-y-6">
+        <RecommendationSection client:load />
         <RaceGoalSection client:load />
         <GarminSection client:load />
       </div>
