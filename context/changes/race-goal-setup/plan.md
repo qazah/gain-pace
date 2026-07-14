@@ -236,15 +236,15 @@ None. `race_goals` + RLS + `authenticated` grants are already applied (F-01). If
 
 #### Automated
 
-- [x] 2.1 Type declarations regenerate: `npx astro sync`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Production build passes: `npm run build`
+- [x] 2.1 Type declarations regenerate: `npx astro sync` — 880d245
+- [x] 2.2 Linting passes: `npm run lint` — 880d245
+- [x] 2.3 Production build passes: `npm run build` — 880d245
 
 #### Manual
 
-- [x] 2.4 No goal → form; saving valid goal switches to summary with correct pace
-- [x] 2.5 Edit reveals prefilled form; saving updates in place (no duplicate row)
-- [x] 2.6 Preset chips and custom km field both set distance
-- [x] 2.7 Invalid input shows inline errors and blocks submit
-- [x] 2.8 No delete/clear control present
-- [x] 2.9 Logged-out reload triggers session-expired path, not a crash
+- [x] 2.4 No goal → form; saving valid goal switches to summary with correct pace — 880d245
+- [x] 2.5 Edit reveals prefilled form; saving updates in place (no duplicate row) — 880d245
+- [x] 2.6 Preset chips and custom km field both set distance — 880d245
+- [x] 2.7 Invalid input shows inline errors and blocks submit — 880d245
+- [x] 2.8 No delete/clear control present — 880d245
+- [x] 2.9 Logged-out reload triggers session-expired path, not a crash — 880d245
