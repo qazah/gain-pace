@@ -3,6 +3,7 @@ import type { Database } from "./types/database";
 export type RaceGoal = Database["public"]["Tables"]["race_goals"]["Row"];
 export type GarminCredentials = Database["public"]["Tables"]["garmin_credentials"]["Row"];
 export type WorkoutSelection = Database["public"]["Tables"]["workout_selections"]["Row"];
+export type RecommendationUsage = Database["public"]["Tables"]["recommendation_usage"]["Row"];
 
 // ---- Race goal request DTO (S-02) ----
 // The shape the race-goal API + service accept when a runner saves a goal.
@@ -14,6 +15,43 @@ export interface RaceGoalInput {
   event_date: string;
   distance_km: number;
   target_finish_seconds: number;
+}
+
+// ---- Recommendation loop DTOs (S-03) ----
+// The modifier inputs, one AI-recommended alternative, and the full generation
+// result the service returns. `intensity`/`feeling` match the workout_selections
+// CHECK constraints; times are minutes.
+
+export interface WorkoutModifiers {
+  time_available_minutes: number;
+  intensity: "low" | "normal" | "high";
+  feeling: "tired" | "normal" | "energized";
+}
+
+export interface WorkoutAlternative {
+  rank: "primary" | "alt_1" | "alt_2";
+  workout_type: string;
+  duration_minutes: number;
+  ai_explanation: string;
+  /** Reserved for S-04 (training-arc note); null in S-03. */
+  training_arc_note: string | null;
+}
+
+export interface RecommendationResult {
+  alternatives: WorkoutAlternative[];
+  /** true → Garmin is connected but has no recovery data for today yet. */
+  recoveryMissing: boolean;
+  /** true → Garmin data was served from a stale cached snapshot. */
+  stale: boolean;
+  /**
+   * Context echoed back to the select endpoint so persistence doesn't re-fetch
+   * Garmin: the modifiers used, the active goal id, and the Garmin snapshot.
+   */
+  context: {
+    modifiers: WorkoutModifiers;
+    race_goal_id: string;
+    garmin_data_snapshot: GarminDashboardData;
+  };
 }
 
 // ---- Garmin normalized DTOs (S-01) ----

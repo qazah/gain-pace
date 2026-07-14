@@ -4,6 +4,7 @@ import {
   GARMIN_SIDECAR_URL,
   GARMIN_SIDECAR_SECRET,
   GARMIN_PASSWORD_ENC_KEY,
+  ANTHROPIC_API_KEY,
 } from "astro:env/server";
 
 export interface ConfigStatus {
@@ -26,6 +27,11 @@ export const configStatuses: ConfigStatus[] = [
     name: "Garmin",
     configured: Boolean(GARMIN_SIDECAR_URL && GARMIN_SIDECAR_SECRET && GARMIN_PASSWORD_ENC_KEY),
     message: "Integracja z Garminem nie jest skonfigurowana — łączenie konta i pobieranie danych jest wyłączone.",
+  },
+  {
+    name: "AI recommendations",
+    configured: Boolean(ANTHROPIC_API_KEY),
+    message: "Rekomendacje AI nie są skonfigurowane — generowanie propozycji treningów jest wyłączone.",
   },
 ];
 

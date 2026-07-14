@@ -23,6 +23,8 @@ export default defineConfig({
       GARMIN_SIDECAR_URL: envField.string({ context: "server", access: "secret", optional: true }),
       GARMIN_SIDECAR_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
       GARMIN_PASSWORD_ENC_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      // AI recommendations (S-03): Anthropic API key for the Claude Haiku call.
+      ANTHROPIC_API_KEY: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });

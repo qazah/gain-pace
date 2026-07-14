@@ -12,3 +12,4 @@ export const SUPABASE_KEY = "test-anon-key";
 export const GARMIN_SIDECAR_URL = "https://sidecar.test";
 export const GARMIN_SIDECAR_SECRET = "test-sidecar-secret";
 export const GARMIN_PASSWORD_ENC_KEY = "test-password-encryption-key-0123456789";
+export const ANTHROPIC_API_KEY = "test-anthropic-key";
