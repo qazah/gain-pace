@@ -317,15 +317,15 @@ One new migration: `recommendation_usage` (daily cap) with RLS + `authenticated`
 
 #### Automated
 
-- [x] 3.1 Types regenerate: `npx astro sync`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Production build passes: `npm run build`
+- [x] 3.1 Types regenerate: `npx astro sync` — d5220b0
+- [x] 3.2 Linting passes: `npm run lint` — d5220b0
+- [x] 3.3 Production build passes: `npm run build` — d5220b0
 
 #### Manual
 
-- [x] 3.4 Gating: CTA when goal/Garmin missing; modifier form when both present
-- [x] 3.5 Modifiers → skeleton → primary + 2 alternatives (primary visually distinct), within ≤3 actions
-- [x] 3.6 Select commits today's single row; committed state renders
-- [x] 3.7 Regenerate works; past the cap shows the friendly rate-limit message
-- [x] 3.8 Induced AI error shows error + Retry (no fabricated workout)
-- [x] 3.9 No-recovery day still recommends with the reduced-confidence note
+- [x] 3.4 Gating: CTA when goal/Garmin missing; modifier form when both present — d5220b0
+- [x] 3.5 Modifiers → skeleton → primary + 2 alternatives (primary visually distinct), within ≤3 actions — d5220b0
+- [x] 3.6 Select commits today's single row; committed state renders — d5220b0
+- [x] 3.7 Regenerate works; past the cap shows the friendly rate-limit message — d5220b0
+- [x] 3.8 Induced AI error shows error + Retry (no fabricated workout) — d5220b0
+- [x] 3.9 No-recovery day still recommends with the reduced-confidence note — d5220b0
