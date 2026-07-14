@@ -221,30 +221,30 @@ None. `race_goals` + RLS + `authenticated` grants are already applied (F-01). If
 
 #### Automated
 
-- [x] 1.1 Type declarations regenerate: `npx astro sync`
-- [x] 1.2 Linting passes (type-checked rules): `npm run lint`
-- [x] 1.3 Production build passes: `npm run build`
+- [x] 1.1 Type declarations regenerate: `npx astro sync` — 73ebd35
+- [x] 1.2 Linting passes (type-checked rules): `npm run lint` — 73ebd35
+- [x] 1.3 Production build passes: `npm run build` — 73ebd35
 
 #### Manual
 
-- [x] 1.4 GET returns `{ goal: null }` with no goal, and the saved goal afterward
-- [x] 1.5 POST creates once, then updates the same row (no duplicate, no partial-index error)
-- [x] 1.6 POST with past date / out-of-band distance / implausible pace / empty name each returns 400
-- [x] 1.7 Unauthenticated GET/POST returns 401
+- [x] 1.4 GET returns `{ goal: null }` with no goal, and the saved goal afterward — 73ebd35
+- [x] 1.5 POST creates once, then updates the same row (no duplicate, no partial-index error) — 73ebd35
+- [x] 1.6 POST with past date / out-of-band distance / implausible pace / empty name each returns 400 — 73ebd35
+- [x] 1.7 Unauthenticated GET/POST returns 401 — 73ebd35
 
 ### Phase 2: Frontend — dashboard race-goal island
 
 #### Automated
 
-- [ ] 2.1 Type declarations regenerate: `npx astro sync`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Production build passes: `npm run build`
+- [x] 2.1 Type declarations regenerate: `npx astro sync`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Production build passes: `npm run build`
 
 #### Manual
 
-- [ ] 2.4 No goal → form; saving valid goal switches to summary with correct pace
-- [ ] 2.5 Edit reveals prefilled form; saving updates in place (no duplicate row)
-- [ ] 2.6 Preset chips and custom km field both set distance
-- [ ] 2.7 Invalid input shows inline errors and blocks submit
-- [ ] 2.8 No delete/clear control present
-- [ ] 2.9 Logged-out reload triggers session-expired path, not a crash
+- [x] 2.4 No goal → form; saving valid goal switches to summary with correct pace
+- [x] 2.5 Edit reveals prefilled form; saving updates in place (no duplicate row)
+- [x] 2.6 Preset chips and custom km field both set distance
+- [x] 2.7 Invalid input shows inline errors and blocks submit
+- [x] 2.8 No delete/clear control present
+- [x] 2.9 Logged-out reload triggers session-expired path, not a crash
