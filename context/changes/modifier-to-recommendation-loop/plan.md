@@ -284,34 +284,34 @@ One new migration: `recommendation_usage` (daily cap) with RLS + `authenticated`
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase migration up`
-- [x] 1.2 Types regenerate: `npx astro sync`
-- [x] 1.3 Unit tests pass (guardrail/validation): `npm test`
-- [x] 1.4 Linting passes: `npm run lint`
-- [x] 1.5 Production build passes (incl. `@anthropic-ai/sdk` under workerd): `npm run build`
+- [x] 1.1 Migration applies cleanly: `npx supabase migration up` — 17d27cd
+- [x] 1.2 Types regenerate: `npx astro sync` — 17d27cd
+- [x] 1.3 Unit tests pass (guardrail/validation): `npm test` — 17d27cd
+- [x] 1.4 Linting passes: `npm run lint` — 17d27cd
+- [x] 1.5 Production build passes (incl. `@anthropic-ai/sdk` under workerd): `npm run build` — 17d27cd
 
 #### Manual
 
-- [x] 1.6 POST /api/recommendations returns a primary + 2 alternatives with explanations
-- [x] 1.7 Guardrail blocks implausible output (one re-prompt, then llm_error — no fabricated workout)
-- [x] 1.8 Prereqs: not_ready(goal) / not_ready(garmin); recoveryMissing degrade still recommends
-- [x] 1.9 Soft daily cap returns rate_limited (429)
-- [x] 1.10 Unauthenticated returns 401
-- [x] 1.11 wrangler tail shows latency + token usage within the 10s budget
+- [x] 1.6 POST /api/recommendations returns a primary + 2 alternatives with explanations — 17d27cd
+- [x] 1.7 Guardrail blocks implausible output (one re-prompt, then llm_error — no fabricated workout) — 17d27cd
+- [x] 1.8 Prereqs: not_ready(goal) / not_ready(garmin); recoveryMissing degrade still recommends — 17d27cd
+- [x] 1.9 Soft daily cap returns rate_limited (429) — 17d27cd
+- [x] 1.10 Unauthenticated returns 401 — 17d27cd
+- [x] 1.11 wrangler tail shows latency + token usage within the 10s budget — 17d27cd
 
 ### Phase 2: Selection persistence — service + API
 
 #### Automated
 
-- [ ] 2.1 Types regenerate: `npx astro sync`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Production build passes: `npm run build`
+- [x] 2.1 Types regenerate: `npx astro sync`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Production build passes: `npm run build`
 
 #### Manual
 
-- [ ] 2.4 POST select persists the chosen alternative as today's single row; re-select updates the same row
-- [ ] 2.5 GET select returns today's selection (or null)
-- [ ] 2.6 Unauthenticated returns 401
+- [x] 2.4 POST select persists the chosen alternative as today's single row; re-select updates the same row
+- [x] 2.5 GET select returns today's selection (or null)
+- [x] 2.6 Unauthenticated returns 401
 
 ### Phase 3: Frontend — modifier → recommendation → selection island
 
