@@ -3,7 +3,7 @@ project: "GainPace"
 version: 1
 status: draft
 created: 2026-06-04
-updated: 2026-07-13
+updated: 2026-07-14
 prd_version: 1
 main_goal: market-feedback
 top_blocker: external
@@ -33,7 +33,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | ---- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- | -------- |
 | F-01 | domain-schema                | (foundation) domain tables in Supabase with RLS enabled per user                                                                 | —             | FR-001, FR-007, FR-008        | ready    |
 | S-01 | garmin-connect-and-fetch     | connect their Garmin account and see today's scheduled workout + recent activity data fetched live                               | F-01          | FR-001, FR-002, FR-003, US-01 | done     |
-| S-02 | race-goal-setup              | define their long-term race goal (event, date, distance, target time)                                                            | F-01          | FR-008, US-01                 | ready    |
+| S-02 | race-goal-setup              | define their long-term race goal (event, date, distance, target time)                                                            | F-01          | FR-008, US-01                 | done     |
 | S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | proposed |
 | S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | proposed |
 
@@ -99,7 +99,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Low-risk, self-contained CRUD slice with no external dependencies. Sequenced in parallel with S-01 so goal data is ready when S-03 fires the first AI recommendation. Risk: if the form allows implausible inputs (past event date, zero distance), the AI prompt in S-03 receives malformed context — basic input validation needed.
-- **Status:** ready
+- **Status:** done
 
 ### S-03: Modifier screen → AI recommendation loop → selection
 
@@ -153,3 +153,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Done
 
 - **S-01: runner can connect their Garmin account via OAuth and see today's scheduled workout from their Garmin training plan alongside recent activity data — last 3–4 workouts, plus recovery metrics (sleep quality, HRV, Body Battery) — fetched live.** — Archived 2026-07-13 → `context/archive/2026-06-14-garmin-connect-and-fetch/`. Lesson: —.
+- **S-02: runner can define their long-term race goal — event name, event date, target distance, and target finish time — stored per account and retrievable as AI context.** — Archived 2026-07-14 → `context/archive/2026-07-14-race-goal-setup/`. Lesson: —.

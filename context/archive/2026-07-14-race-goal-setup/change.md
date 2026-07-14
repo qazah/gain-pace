@@ -1,10 +1,10 @@
 ---
 change_id: race-goal-setup
 title: Race goal setup
-status: implemented
+status: archived
 created: 2026-07-14
 updated: 2026-07-14
-archived_at: null
+archived_at: 2026-07-14T18:57:03Z
 ---
 
 ## Notes
