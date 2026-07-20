@@ -28,11 +28,12 @@ export const RECOMMENDATION_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["workout_type", "duration_minutes", "ai_explanation"],
+        required: ["workout_type", "duration_minutes", "ai_explanation", "training_arc_note"],
         properties: {
           workout_type: { type: "string" },
           duration_minutes: { type: "integer" },
           ai_explanation: { type: "string" },
+          training_arc_note: { type: "string" },
         },
       },
     },
@@ -47,6 +48,16 @@ export const recommendationResponseSchema = z.object({
         workout_type: z.string().min(1),
         duration_minutes: z.number().int().positive(),
         ai_explanation: z.string().min(1),
+        // S-04: the model is asked for a per-alternative long-term arc note. Kept
+        // lenient here (optional + empty/whitespace → null) so a missing or blank
+        // note degrades gracefully — it never fails an otherwise-plausible workout.
+        training_arc_note: z
+          .string()
+          .nullish()
+          .transform((v) => {
+            const t = (v ?? "").trim();
+            return t.length > 0 ? t : null;
+          }),
       }),
     )
     .length(3),

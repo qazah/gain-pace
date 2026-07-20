@@ -99,7 +99,10 @@ const SYSTEM_PROMPT = [
   "You are a running coach that adapts today's workout to the runner's real state.",
   "You will receive the runner's recent activities, last night's recovery metrics, their race goal, and today's modifiers (time available, intensity preference, how they feel).",
   "Return exactly 3 workout alternatives, ordered best-fit-first: the first is your primary recommendation, the other two are 'if you prefer' options.",
-  "Each alternative: a short workout_type label, an integer duration_minutes, and a plain-language ai_explanation (one or two sentences, no jargon, no raw numbers) that references the runner's recovery state and/or race-goal proximity.",
+  "Each alternative has four fields:",
+  "workout_type is a short label; duration_minutes is an integer.",
+  "ai_explanation is one or two plain-language sentences (no jargon, no raw numbers) about why this workout fits the runner TODAY — their recovery state, their available time, and how they feel. Keep it about today's readiness; do not talk about the race goal or long-term progress here.",
+  "training_arc_note is exactly one plain-language sentence (no jargon, no raw numbers) about how choosing this option affects the runner's LONG-TERM progress toward their race goal — the training arc over the weeks to race day (for example: building the endurance base, banking recovery now to train harder later, or staying on pace for the goal). This is about the trajectory over time, not today's fit, and must not simply repeat ai_explanation.",
   "Safety: never prescribe a volume or intensity implausible given the runner's last few activities. Keep durations sensible relative to their recent sessions and today's available time. Respect the modifiers — a tired runner or a short time window means a lighter/shorter session.",
 ].join(" ");
 
@@ -235,7 +238,7 @@ export async function generateRecommendation(
       workout_type: alt.workout_type,
       duration_minutes: alt.duration_minutes,
       ai_explanation: alt.ai_explanation,
-      training_arc_note: null, // reserved for S-04
+      training_arc_note: alt.training_arc_note, // S-04: long-term arc note (null when the model omitted/blanked it)
     }));
   }
 
