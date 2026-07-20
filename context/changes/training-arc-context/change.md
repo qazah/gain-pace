@@ -1,7 +1,7 @@
 ---
 change_id: training-arc-context
 title: Training arc context per AI recommendation
-status: implementing
+status: implemented
 created: 2026-07-20
 updated: 2026-07-21
 archived_at: null

@@ -223,12 +223,12 @@ None. The `training_arc_note` column already exists (nullable); pre-existing S-0
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.1 Type checking passes: `npm run build` — 20d8647
+- [x] 2.2 Linting passes: `npm run lint` — 20d8647
 
 #### Manual
 
-- [x] 2.3 Each alternative card shows the arc note as a distinct labeled line beneath the explanation
-- [x] 2.4 After committing and reloading, the committed block shows the arc note
-- [x] 2.5 A null-note alternative / older committed selection renders cleanly with no empty label
-- [x] 2.6 No regression to the S-03 modifier → skeleton → results → commit → reload flow (≤3 actions)
+- [x] 2.3 Each alternative card shows the arc note as a distinct labeled line beneath the explanation — 20d8647
+- [x] 2.4 After committing and reloading, the committed block shows the arc note — 20d8647
+- [x] 2.5 A null-note alternative / older committed selection renders cleanly with no empty label — 20d8647
+- [x] 2.6 No regression to the S-03 modifier → skeleton → results → commit → reload flow (≤3 actions) — 20d8647
