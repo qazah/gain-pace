@@ -36,6 +36,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | S-02 | race-goal-setup              | define their long-term race goal (event, date, distance, target time)                                                            | F-01          | FR-008, US-01                 | done     |
 | S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | done     |
 | S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | done     |
+| S-05 | workout-step-detail          | see a concrete prescription per option — a one-line summary (duration + effort + target pace) and, for structured sessions, an expandable step-by-step breakdown — with paces grounded in recent runs and guardrailed for plausibility | S-03, S-04    | FR-004, FR-005 (extends)      | ready    |
 
 ## Streams
 
@@ -43,7 +44,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme             | Chain                              | Note                                                                         |
 | ------ | ----------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
-| A      | Integracja Garmin | `F-01` → `S-01` → `S-03` → `S-04` | Główna oś north star — całe AI zależy od danych Garmin z tego łańcucha.      |
+| A      | Integracja Garmin | `F-01` → `S-01` → `S-03` → `S-04` → `S-05` | Główna oś north star — całe AI zależy od danych Garmin z tego łańcucha.      |
 | B      | Cel treningowy    | `S-02`                             | Zależy od F-01 (ze Streamu A); dołącza do Streamu A jako drugie wejście S-03. |
 
 ## Baseline
@@ -126,6 +127,23 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Extends the S-03 AI prompt with an additional output field (training arc reasoning per alternative). Low risk if S-03's structured output response schema is designed to include this field from the start. Risk: if S-03 ships with a schema that omits this field, retrofitting it requires a prompt change and a response schema migration across both slices.
 - **Status:** done
 
+### S-05: Structured workout detail per recommendation
+
+- **Outcome:** for each of the 3 alternatives, the runner sees (a) a one-line summary under the workout name — duration + effort type + target pace (e.g. "45 min easy 6:15/km") — and (b) for structured sessions, an expandable ("show details") step-by-step breakdown with per-segment targets (e.g. 10 min easy 6:00 → 5× [1 min ~4:20 / 2 min easy 7:30] → 10 min easy 6:00). Target paces are derived from the runner's recent runs and validated by a guardrail for plausibility.
+- **Change ID:** workout-step-detail
+- **PRD refs:** FR-004, FR-005 (extension — no dedicated FR for the structured breakdown yet; consider a PRD addendum)
+- **Prerequisites:** S-03, S-04
+- **Parallel with:** —
+- **Blockers:** —
+- **Decisions locked:** grounded paces + guardrail — a pace-plausibility check analogous to S-03's volume/duration guardrail.
+- **Unknowns (resolve during `/10x-plan`):**
+  - Data model: structured step array (segments) vs a richer free-text detail block.
+  - Persistence: store the breakdown on `workout_selections` (JSONB column → migration) vs show it only on fresh generation.
+  - Pace guardrail: how to derive a plausible pace band from recent activities (distance/duration/HR).
+  - Format/units (min/km) and the expand UI (only for sessions that have steps).
+- **Risk:** Introduces a new hard-regression class — implausible target paces (the pace analogue of S-03's volume guardrail); mitigate with a pace-band guardrail grounded in recent activity. Extends the single LLM call with structured output + a second guardrail; persisting the breakdown may require a schema migration.
+- **Status:** ready
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                    | Suggested issue title                                                              | Ready for `/10x-plan` | Notes                                                          |
@@ -135,6 +153,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-02       | race-goal-setup              | [GainPace] Race goal setup form + persistence                                      | yes                   | Run `/10x-plan race-goal-setup`; can start in parallel         |
 | S-03       | modifier-to-recommendation-loop | [GainPace] Modifier screen → AI recommendation loop → workout selection          | no                    | Proposed: S-01 + S-02 must ship first                         |
 | S-04       | training-arc-context         | [GainPace] Training arc one-liner per AI recommendation                            | no                    | Proposed: S-03 must ship first                                 |
+| S-05       | workout-step-detail          | [GainPace] Structured per-option workout breakdown (summary + expandable steps, guarded paces) | yes           | Prereqs S-03 + S-04 done — run `/10x-plan workout-step-detail`  |
 
 ## Open Roadmap Questions
 
