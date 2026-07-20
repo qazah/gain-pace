@@ -207,28 +207,28 @@ None. The `training_arc_note` column already exists (nullable); pre-existing S-0
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run build`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 Existing tests still pass: `npm run test`
+- [x] 1.1 Type checking passes: `npm run build` — 6f6d009
+- [x] 1.2 Linting passes: `npm run lint` — 6f6d009
+- [x] 1.3 Existing tests still pass: `npm run test` — 6f6d009
 
 #### Manual
 
-- [x] 1.4 `POST /api/recommendations` returns 3 alternatives each with a non-empty `training_arc_note`
-- [x] 1.5 Arc notes are trajectory-focused and distinct from the `ai_explanation` today's-fit sentences
-- [x] 1.6 Recommendation log still emits and the call stays within the ~10s budget
-- [x] 1.7 Committing persists a non-null `training_arc_note` to `workout_selections`
-- [x] 1.8 A run with an omitted/empty note still returns a valid recommendation (no failure/re-prompt)
+- [x] 1.4 `POST /api/recommendations` returns 3 alternatives each with a non-empty `training_arc_note` — 6f6d009
+- [x] 1.5 Arc notes are trajectory-focused and distinct from the `ai_explanation` today's-fit sentences — 6f6d009
+- [x] 1.6 Recommendation log still emits and the call stays within the ~10s budget — 6f6d009
+- [x] 1.7 Committing persists a non-null `training_arc_note` to `workout_selections` — 6f6d009
+- [x] 1.8 A run with an omitted/empty note still returns a valid recommendation (no failure/re-prompt) — 6f6d009
 
 ### Phase 2: Display (frontend)
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run build`
-- [ ] 2.2 Linting passes: `npm run lint`
+- [x] 2.1 Type checking passes: `npm run build`
+- [x] 2.2 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.3 Each alternative card shows the arc note as a distinct labeled line beneath the explanation
-- [ ] 2.4 After committing and reloading, the committed block shows the arc note
-- [ ] 2.5 A null-note alternative / older committed selection renders cleanly with no empty label
-- [ ] 2.6 No regression to the S-03 modifier → skeleton → results → commit → reload flow (≤3 actions)
+- [x] 2.3 Each alternative card shows the arc note as a distinct labeled line beneath the explanation
+- [x] 2.4 After committing and reloading, the committed block shows the arc note
+- [x] 2.5 A null-note alternative / older committed selection renders cleanly with no empty label
+- [x] 2.6 No regression to the S-03 modifier → skeleton → results → commit → reload flow (≤3 actions)

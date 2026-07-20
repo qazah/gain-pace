@@ -1,4 +1,4 @@
-import { Check, Clock, Star, TriangleAlert } from "lucide-react";
+import { Check, Clock, Star, TrendingUp, TriangleAlert } from "lucide-react";
 import type { RecommendationResult, WorkoutAlternative } from "@/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,13 @@ function Card({
         <Clock className="size-3.5" />
         {formatDuration(alt.duration_minutes)}
       </div>
-      <p className="mb-3 text-sm text-blue-100/80">{alt.ai_explanation}</p>
+      <p className="mb-2 text-sm text-blue-100/80">{alt.ai_explanation}</p>
+      {alt.training_arc_note ? (
+        <div className="mb-3 flex items-start gap-1.5 text-xs text-blue-100/60">
+          <TrendingUp className="mt-0.5 size-3.5 shrink-0 text-purple-300" />
+          <span>{alt.training_arc_note}</span>
+        </div>
+      ) : null}
       <Button
         onClick={onSelect}
         disabled={committed}

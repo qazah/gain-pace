@@ -1,4 +1,4 @@
-import { CalendarCheck, Loader2, RotateCw, Sparkles, Target } from "lucide-react";
+import { CalendarCheck, Loader2, RotateCw, Sparkles, Target, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRecommendation } from "@/components/hooks/useRecommendation";
 import ModifierForm from "./ModifierForm";
@@ -111,6 +111,12 @@ export default function RecommendationSection() {
               Committed: {today.workout_type} · {formatDuration(today.duration_minutes)}
             </div>
             <p className="mt-0.5 text-xs text-blue-100/70">{today.ai_explanation}</p>
+            {today.training_arc_note ? (
+              <div className="mt-1 flex items-start gap-1.5 text-xs text-blue-100/60">
+                <TrendingUp className="mt-0.5 size-3.5 shrink-0 text-purple-300" />
+                <span>{today.training_arc_note}</span>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
