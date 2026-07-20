@@ -18,21 +18,21 @@ Generating recommendations shows, under each of the 3 alternatives, a distinct l
 
 | Decision                     | Choice                                                     | Why (1 sentence)                                                              | Source |
 | ---------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------- | ------ |
-| Note content / distinctness  | Long-term trajectory only; re-scope `ai_explanation` to today's fit | Cleanest split — each line owns a distinct timescale; kills redundancy risk   | Plan   |
-| Missing note from model      | Optional/nullable → graceful degrade (empty→null)          | A cosmetic sentence must never fail a valid, plausible workout               | Plan   |
+| Note content / distinctness  | Consequence-of-choice per option (what you gain vs trade toward the goal), distinct across the 3; `ai_explanation` re-scoped to today's fit | Each note reads as a real choice showing its benefit; no redundancy with the today's-fit line | Plan (reframed during manual testing) |
+| Missing note from model      | Required in schema, nullable in Zod (empty/absent→null) → graceful degrade | A cosmetic sentence must never fail a valid, plausible workout               | Plan   |
 | Display treatment            | Distinct labeled line with icon, both render sites         | Reinforces the today-vs-arc split; scannable; fits existing card style        | Plan   |
 | Testing depth                | Manual + keep existing guardrail test green; no new tests  | LOW slice; S-03 deferred the mocked-LLM/eval harness                          | Plan   |
 | DB migration                 | None                                                        | The nullable column already exists from S-03                                 | Research |
 
 ## Scope
 
-**In scope:** add `training_arc_note` to the structured-output schema (optional) + Zod parse (nullable, empty→null); rewrite the system prompt to split today's-fit vs long-term arc; map the parsed value in the service; render a labeled arc line in `RecommendationResults.tsx` and `RecommendationSection.tsx` (null → nothing).
+**In scope:** add `training_arc_note` to the structured-output schema (in `required`) + Zod parse (nullable, empty→null); rewrite the system prompt to split today's-fit vs long-term arc; map the parsed value in the service; render a labeled arc line in `RecommendationResults.tsx` and `RecommendationSection.tsx` (null → nothing).
 
 **Out of scope:** DB migration; new unit tests / LLM eval harness; changes to the plausible-load guardrail, API routes, daily cap, or selection persistence logic; backfilling arc notes onto old rows; any separate arc timeline/visualization.
 
 ## Architecture / Approach
 
-Single Claude call, unchanged in shape — one added output field. Backend first: schema `properties` (not `required`, so omission is legal) + lenient Zod + a prompt that assigns `ai_explanation` to *today* and `training_arc_note` to *the arc*, then the service stops hardcoding `null`. Frontend second: a distinct labeled line (lucide icon + muted text) in the two existing render sites, conditional on a non-null note. Persistence and API response already carry the field.
+Single Claude call, unchanged in shape — one added output field. Backend first: schema `properties` + `required` (model reliably emits it) + lenient Zod (graceful degrade: empty/absent → null) + a prompt that assigns `ai_explanation` to *today* and `training_arc_note` to *the arc*, then the service stops hardcoding `null`. Frontend second: a distinct labeled line (lucide icon + muted text) in the two existing render sites, conditional on a non-null note. Persistence and API response already carry the field.
 
 ## Phases at a Glance
 
@@ -48,7 +48,7 @@ Single Claude call, unchanged in shape — one added output field. Backend first
 
 - **Prompt quality is the only real risk** — the structural change is trivial, but the note must genuinely differ from the today's-fit explanation; expect prompt iteration during Phase 1 manual verification.
 - With graceful-degrade + manual-only testing, the new field's schema/parse contract has **no automated regression guard** — an accepted trade for a LOW slice.
-- Assumes the model reliably includes the note when instructed even though it's not in `required`; if omissions are frequent in practice, tighten the prompt (not the schema).
+- The field is in the schema's `required`, so the model emits it reliably; graceful degrade lives in the lenient Zod parse (empty/absent → null). If notes come back blank too often, tighten the prompt rather than the schema.
 
 ## Success Criteria (Summary)
 
