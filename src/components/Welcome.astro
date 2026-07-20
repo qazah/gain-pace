@@ -32,10 +32,11 @@ import Topbar from "@/components/Topbar.astro";
       <h1
         class="mb-6 bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-clip-text text-5xl leading-tight font-bold text-transparent sm:text-6xl lg:text-7xl"
       >
-        10x Astro Starter
+        GainPace
       </h1>
       <p class="mb-10 max-w-2xl text-lg text-blue-100/70 sm:text-xl">
-        A production-ready starter with authentication, modern tooling, and a cosmic developer experience.
+        Your run, adapted to today. Tell GainPace how much time you have, how hard you want to go, and how you feel —
+        and get three workout options, each grounded in your Garmin recovery data and your race goal.
       </p>
       <div class="flex flex-col gap-4 sm:flex-row">
         <a
@@ -68,12 +69,12 @@ import Topbar from "@/components/Topbar.astro";
           stroke-linejoin="round"
           class="mb-4 text-purple-300"
         >
-          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
         </svg>
-        <h3 class="mb-2 text-lg font-semibold text-white">Authentication Ready</h3>
+        <h3 class="mb-2 text-lg font-semibold text-white">Grounded in your Garmin data</h3>
         <p class="text-sm leading-relaxed text-blue-100/60">
-          Built-in Supabase auth with sign in, sign up, and protected routes out of the box.
+          Every suggestion reads your real recovery — sleep, HRV, Body Battery — and your recent runs, not generic
+          training advice.
         </p>
       </div>
 
@@ -94,9 +95,10 @@ import Topbar from "@/components/Topbar.astro";
           <polyline points="2 17 12 22 22 17"></polyline>
           <polyline points="2 12 12 17 22 12"></polyline>
         </svg>
-        <h3 class="mb-2 text-lg font-semibold text-white">Modern Stack</h3>
+        <h3 class="mb-2 text-lg font-semibold text-white">Three options, not one order</h3>
         <p class="text-sm leading-relaxed text-blue-100/60">
-          Astro 5, React 19, Tailwind 4, and TypeScript — the latest tools, ready to go.
+          Instead of a single prescribed workout, get a primary pick plus two alternatives — each with a plain-language
+          reason why.
         </p>
       </div>
 
@@ -113,12 +115,14 @@ import Topbar from "@/components/Topbar.astro";
           stroke-linejoin="round"
           class="mb-4 text-purple-300"
         >
-          <polyline points="16 18 22 12 16 6"></polyline>
-          <polyline points="8 6 2 12 8 18"></polyline>
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="12" r="6"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
         </svg>
-        <h3 class="mb-2 text-lg font-semibold text-white">Developer Experience</h3>
+        <h3 class="mb-2 text-lg font-semibold text-white">Aligned to your race goal</h3>
         <p class="text-sm leading-relaxed text-blue-100/60">
-          ESLint, Prettier, and pre-commit hooks keep your codebase clean from day one.
+          See how today's choice moves your long-term progress toward your event, so you can adapt to real life without
+          losing the plan.
         </p>
       </div>
     </div>
