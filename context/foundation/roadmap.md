@@ -3,7 +3,7 @@ project: "GainPace"
 version: 1
 status: draft
 created: 2026-06-04
-updated: 2026-07-14
+updated: 2026-07-21
 prd_version: 1
 main_goal: market-feedback
 top_blocker: external
@@ -35,7 +35,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | S-01 | garmin-connect-and-fetch     | connect their Garmin account and see today's scheduled workout + recent activity data fetched live                               | F-01          | FR-001, FR-002, FR-003, US-01 | done     |
 | S-02 | race-goal-setup              | define their long-term race goal (event, date, distance, target time)                                                            | F-01          | FR-008, US-01                 | done     |
 | S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | done     |
-| S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | proposed |
+| S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | done     |
 
 ## Streams
 
@@ -124,7 +124,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Extends the S-03 AI prompt with an additional output field (training arc reasoning per alternative). Low risk if S-03's structured output response schema is designed to include this field from the start. Risk: if S-03 ships with a schema that omits this field, retrofitting it requires a prompt change and a response schema migration across both slices.
-- **Status:** proposed
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -155,3 +155,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-01: runner can connect their Garmin account via OAuth and see today's scheduled workout from their Garmin training plan alongside recent activity data — last 3–4 workouts, plus recovery metrics (sleep quality, HRV, Body Battery) — fetched live.** — Archived 2026-07-13 → `context/archive/2026-06-14-garmin-connect-and-fetch/`. Lesson: —.
 - **S-02: runner can define their long-term race goal — event name, event date, target distance, and target finish time — stored per account and retrievable as AI context.** — Archived 2026-07-14 → `context/archive/2026-07-14-race-goal-setup/`. Lesson: —.
 - **S-03: runner can set today's modifiers (Time available / Intensity preference / Feeling), receive a primary AI-recommended workout card plus 2 alternatives — each with a plain-language explanation grounded in their Garmin recovery metrics and active modifiers — and select one as today's committed workout; the whole flow completes within 3 user actions on the modifier screen.** — Archived 2026-07-14 → `context/archive/2026-07-14-modifier-to-recommendation-loop/`. Lesson: —.
+- **S-04: runner can see a one-line training-arc note alongside each of the 3 workout alternatives, explaining how today's choice affects their long-term progress toward their defined race goal.** — Archived 2026-07-21 → `context/archive/2026-07-20-training-arc-context/`. Lesson: —.
