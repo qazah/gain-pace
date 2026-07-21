@@ -286,29 +286,29 @@ One additive, nullable TEXT column — no backfill. Pre-existing `workout_select
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run build`
-- [x] 1.2 Linting passes: `npm run lint`
-- [x] 1.3 `npx astro check`: only the 2 known not-yet-wired errors remain (recommendations.ts mapping, select.ts) — full green deferred to Phase 3 (adapted)
+- [x] 1.1 Type checking passes: `npm run build` — 7710a62
+- [x] 1.2 Linting passes: `npm run lint` — 7710a62
+- [x] 1.3 `npx astro check`: only the 2 known not-yet-wired errors remain (recommendations.ts mapping, select.ts) — full green deferred to Phase 3 (adapted) — 7710a62
 
 #### Manual
 
-- [x] 1.4 Migration applies cleanly to local Supabase; `recovery_warning` exists as nullable TEXT
+- [x] 1.4 Migration applies cleanly to local Supabase; `recovery_warning` exists as nullable TEXT — 7710a62
 
 ### Phase 2: AI contract, flag & fallback
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run build`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 `npx astro check`: only the 1 known select.ts error remains (mapping now populates recovery_warning) — full green deferred to Phase 3 (adapted)
-- [ ] 2.4 Existing tests still pass: `npm run test`
+- [x] 2.1 Type checking passes: `npm run build`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 `npx astro check`: only the 1 known select.ts error remains (mapping now populates recovery_warning) — full green deferred to Phase 3 (adapted)
+- [x] 2.4 Existing tests still pass: `npm run test`
 
 #### Manual
 
-- [ ] 2.5 `intensity=high` + body battery < 20 → `recovery_warning` on hard alternatives, null on lighter ones
-- [ ] 2.6 `intensity=normal` / body battery ≥ 20 / recovery missing → `recovery_warning: null` everywhere
-- [ ] 2.7 Hard option with no model warning under a set flag gets the static fallback
-- [ ] 2.8 `evt:"recommendation"` log emits `recoveryConflict`; no extra re-prompts caused by this field
+- [x] 2.5 `intensity=high` + body battery < 20 → `recovery_warning` on hard alternatives, null on lighter ones
+- [x] 2.6 `intensity=normal` / body battery ≥ 20 / recovery missing → `recovery_warning: null` everywhere
+- [x] 2.7 Hard option with no model warning under a set flag gets the static fallback
+- [x] 2.8 `evt:"recommendation"` log emits `recoveryConflict`; no extra re-prompts caused by this field
 
 ### Phase 3: Persistence
 

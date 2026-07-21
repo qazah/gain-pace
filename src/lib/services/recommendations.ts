@@ -13,6 +13,8 @@ import { getDashboardData } from "./garmin";
 import { getActiveRaceGoal } from "./race-goals";
 import {
   RECOMMENDATION_JSON_SCHEMA,
+  isHardWorkout,
+  isRecoveryConflict,
   parseRecommendation,
   validateAlternatives,
   validateWorkoutStructure,
@@ -33,6 +35,15 @@ const TIMEOUT_MS = 20_000; // per-attempt cap; raised from 9s — a structured, 
 const MAX_TOKENS = 2048; // the structured output is small
 const DAILY_CAP = 10; // soft per-user daily generation cap
 const RANKS = ["primary", "alt_1", "alt_2"] as const;
+
+// S-06: static fallback caution, used when the low-recovery flag is set but the
+// model left recovery_warning empty on a hard option — the signal never drops.
+const RECOVERY_WARNING_FALLBACK =
+  "Your recovery looks low today — this is a demanding session, so listen to your body and ease off if needed.";
+// Appended to the user content only when the conflict flag is set, so the model
+// knows to author a caution for hard options this run.
+const RECOVERY_CONFLICT_INSTRUCTION =
+  "NOTE: the runner's body battery is low today but they asked for high intensity. For any HARD option (one containing a tempo, threshold, or interval segment), set recovery_warning to one short, kind sentence acknowledging they are pushing hard despite low recovery and gently suggesting they listen to their body. Leave recovery_warning empty for easier options.";
 
 // ---- Error taxonomy the API route maps to stable JSON ----
 
@@ -104,13 +115,14 @@ const SYSTEM_PROMPT = [
   "You are a running coach that adapts today's workout to the runner's real state.",
   "You will receive the runner's recent activities, last night's recovery metrics, their race goal, and today's modifiers (time available, intensity preference, how they feel).",
   "Return exactly 3 workout alternatives, ordered best-fit-first: the first is your primary recommendation, the other two are 'if you prefer' options.",
-  "Each alternative has six fields:",
+  "Each alternative has seven fields:",
   "workout_type is a short label; duration_minutes is an integer.",
   "ai_explanation is one or two plain-language sentences (no jargon, no raw numbers) about why this workout fits the runner TODAY — their recovery state, their available time, and how they feel. Keep it about today's readiness; do not talk about the race goal or long-term progress here.",
   "training_arc_note is exactly one plain-language sentence (no jargon, no raw numbers) that frames THIS specific option as a choice: what the runner GAINS by picking it and what they TRADE, in terms of long-term progress toward their race goal over the weeks to race day (for example: staying on pace to the goal as the best-balanced call, banking recovery now to train harder in the coming days, or speeding up fitness gains at the cost of more fatigue tomorrow). Across the three alternatives make these notes clearly distinct, so the runner can see why they would choose one over another. It is about the long-term trade of this choice, not today's fit, and must not repeat ai_explanation.",
   'summary is ONE short line the runner reads under the workout name: duration + effort + target pace, e.g. "45 min easy 6:15/km" or "50 min with 5x3 min at threshold".',
   'steps is an ordered list of TIME-BASED segments that together make up the session. Each step has: effort (exactly one of: warmup, easy, steady, tempo, threshold, interval, recovery, cooldown); duration_minutes (a positive integer); and target_pace as minutes:seconds per km (e.g. "6:15"). A plain continuous run is a SINGLE step. For interval sessions, emit each repetition as its own segment (e.g. 5x [1 min interval, 2 min recovery] becomes 10 segments) and compress the repeat only in the summary. The step durations MUST sum to the alternative\'s duration_minutes.',
   "Target paces must be realistic for THIS runner given their recent runs: easy/warmup/cooldown/recovery segments at or near their recent easy pace, and only higher-effort segments (steady/tempo/threshold/interval) meaningfully faster. Never prescribe a pace the runner could not hold.",
+  "recovery_warning must be an empty string by default. Only set it when the user message explicitly says the runner's recovery is low for a hard session, and then only for HARD options (containing a tempo/threshold/interval segment) — one short, kind sentence; leave it empty for easier options.",
   "Safety: never prescribe a volume or intensity implausible given the runner's last few activities. Keep durations sensible relative to their recent sessions and today's available time. Respect the modifiers — a tired runner or a short time window means a lighter/shorter session.",
 ].join(" ");
 
@@ -186,7 +198,13 @@ export async function generateRecommendation(
   }
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: TIMEOUT_MS, maxRetries: 2 });
-  const baseContext = buildUserContext(dashboard, goal, modifiers);
+
+  // S-06: deterministic low-recovery conflict — the runner asked for high
+  // intensity while their body battery is low. When set, ask the model to author
+  // a caution for hard options; the mapping below enforces when it actually shows.
+  const recoveryConflict = isRecoveryConflict(dashboard.recovery?.bodyBattery.current ?? null, modifiers.intensity);
+  const baseContext =
+    buildUserContext(dashboard, goal, modifiers) + (recoveryConflict ? `\n\n${RECOVERY_CONFLICT_INSTRUCTION}` : "");
 
   const started = Date.now();
   let inputTokens = 0;
@@ -260,6 +278,10 @@ export async function generateRecommendation(
       duration_minutes: alt.duration_minutes,
       ai_explanation: alt.ai_explanation,
       training_arc_note: alt.training_arc_note, // S-04: long-term arc note (null when the model omitted/blanked it)
+      // S-06: caution shows iff the conflict flag is set AND this option is hard;
+      // fall back to a static sentence so a set flag never leaves a hard option bare.
+      recovery_warning:
+        recoveryConflict && isHardWorkout(alt.steps) ? (alt.recovery_warning ?? RECOVERY_WARNING_FALLBACK) : null,
       summary: alt.summary, // S-05: model-authored one-liner
       steps: alt.steps.map((s) => ({
         effort: s.effort,
@@ -280,6 +302,7 @@ export async function generateRecommendation(
       outputTokens,
       ok: alternatives != null,
       easyPaceSeconds, // S-05: null when history too thin (pace band fell back to absolute caps)
+      recoveryConflict, // S-06: low body battery + high intensity → hard options carry a caution
       lastViolations: alternatives ? null : lastViolations,
     }),
   );

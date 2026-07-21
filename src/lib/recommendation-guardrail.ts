@@ -1,5 +1,5 @@
 import { z } from "astro/zod";
-import type { GarminActivity, WorkoutEffort } from "@/types";
+import type { GarminActivity, WorkoutEffort, WorkoutModifiers } from "@/types";
 
 /**
  * The AI-recommendation contract + safety guardrail (S-03/S-05), kept in one
@@ -47,12 +47,21 @@ export const RECOMMENDATION_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["workout_type", "duration_minutes", "ai_explanation", "training_arc_note", "summary", "steps"],
+        required: [
+          "workout_type",
+          "duration_minutes",
+          "ai_explanation",
+          "training_arc_note",
+          "recovery_warning",
+          "summary",
+          "steps",
+        ],
         properties: {
           workout_type: { type: "string" },
           duration_minutes: { type: "integer" },
           ai_explanation: { type: "string" },
           training_arc_note: { type: "string" },
+          recovery_warning: { type: "string" },
           summary: { type: "string" },
           steps: {
             type: "array",
@@ -119,6 +128,16 @@ export const recommendationResponseSchema = z.object({
         // lenient here (optional + empty/whitespace → null) so a missing or blank
         // note degrades gracefully — it never fails an otherwise-plausible workout.
         training_arc_note: z
+          .string()
+          .nullish()
+          .transform((v) => {
+            const t = (v ?? "").trim();
+            return t.length > 0 ? t : null;
+          }),
+        // S-06: optional low-recovery caution. Same lenient parse as
+        // training_arc_note — the service decides when it applies (deterministic
+        // flag + hard-option), so a missing/blank value here degrades to null.
+        recovery_warning: z
           .string()
           .nullish()
           .transform((v) => {
@@ -338,4 +357,32 @@ export function validateWorkoutStructure(
   });
 
   return { ok: violations.length === 0, violations, easyPaceSeconds };
+}
+
+// ---- Low-recovery conflict (S-06) ----
+// Deterministic detection of "the runner asked for a hard session while their
+// recovery is low." Code owns *whether* to warn; the model owns the wording.
+// This never blocks a recommendation — it only gates whether a caution shows.
+
+/** Body battery (0–100) below this, with intensity=high, trips the conflict flag. */
+export const LOW_BODY_BATTERY = 20;
+
+/** Efforts that make an option "hard" — the only options that carry a caution. */
+const HARD_EFFORTS = new Set<WorkoutEffort>(["tempo", "threshold", "interval"]);
+
+/** True when an alternative contains at least one hard segment. */
+export function isHardWorkout(steps: { effort: WorkoutEffort }[]): boolean {
+  return steps.some((s) => HARD_EFFORTS.has(s.effort));
+}
+
+/**
+ * True when the runner requested high intensity while their current body battery
+ * is below the low threshold. A null body battery (recovery missing) is never a
+ * conflict — we don't warn on absent data.
+ */
+export function isRecoveryConflict(
+  bodyBatteryCurrent: number | null,
+  intensity: WorkoutModifiers["intensity"],
+): boolean {
+  return bodyBatteryCurrent != null && bodyBatteryCurrent < LOW_BODY_BATTERY && intensity === "high";
 }
