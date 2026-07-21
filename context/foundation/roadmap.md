@@ -37,6 +37,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | done     |
 | S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | done     |
 | S-05 | workout-step-detail          | see a concrete prescription per option — a one-line summary (duration + effort + target pace) and, for structured sessions, an expandable step-by-step breakdown — with paces grounded in recent runs and guardrailed for plausibility | S-03, S-04    | FR-004, FR-005 (extends)      | ready    |
+| S-06 | recovery-conflict-warning    | see a caution note under a hard option when they ask for high intensity while their recovery (body battery) is low — informed by watch data, never blocking their choice | S-05          | FR-004, FR-005 (extends)      | new      |
 
 ## Streams
 
@@ -44,7 +45,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme             | Chain                              | Note                                                                         |
 | ------ | ----------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
-| A      | Integracja Garmin | `F-01` → `S-01` → `S-03` → `S-04` → `S-05` | Główna oś north star — całe AI zależy od danych Garmin z tego łańcucha.      |
+| A      | Integracja Garmin | `F-01` → `S-01` → `S-03` → `S-04` → `S-05` → `S-06` | Główna oś north star — całe AI zależy od danych Garmin z tego łańcucha.      |
 | B      | Cel treningowy    | `S-02`                             | Zależy od F-01 (ze Streamu A); dołącza do Streamu A jako drugie wejście S-03. |
 
 ## Baseline
@@ -144,6 +145,19 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Introduces a new hard-regression class — implausible target paces (the pace analogue of S-03's volume guardrail); mitigate with a pace-band guardrail grounded in recent activity. Extends the single LLM call with structured output + a second guardrail; persisting the breakdown may require a schema migration.
 - **Status:** ready
 
+### S-06: Low-recovery conflict warning
+
+- **Outcome:** when the runner asks for a hard session (intensity = high) while their recovery is low, each genuinely hard option carries a one-line amber caution acknowledging the tradeoff and nudging them to listen to their body. The runner's choice is never blocked — the watch informs, it does not gate.
+- **Change ID:** recovery-conflict-warning
+- **PRD refs:** FR-004, FR-005 (extension — same "grounded in recovery data" wedge; consider folding into the PRD addendum with S-05)
+- **Prerequisites:** S-05 (reuses the per-alternative `steps` to detect a "hard" option)
+- **Parallel with:** —
+- **Decisions locked (brainstorming, 2026-07-21):** code owns *whether* to warn (deterministic flag: `body_battery < LOW_BODY_BATTERY && intensity === "high"` — body battery only; sleep/HRV stay model context); the model owns *how it's worded* (new nullable `recovery_warning` field); a static fallback guarantees the note never silently drops; intent always wins (no veto). Warning shows iff `(flag set && option is hard)`. Persist as a flat `recovery_warning TEXT` column, mirroring `training_arc_note`. UI: amber `TriangleAlert` line under a hard option in both render sites.
+- **Unknowns (resolve during `/10x-plan`):**
+  - The `LOW_BODY_BATTERY` starting threshold (proposed 30) and the fallback sentence wording.
+- **Risk:** Low-to-moderate. Reuses the S-03 re-prompt/guardrail scaffolding and S-05 steps; the deterministic flag keeps behavior testable. Main risk is threshold tuning (too low → never warns; too high → warns on healthy days) and ensuring the warning never becomes a de-facto block. Recovery data already flows to the model (verified in `recommendations.ts`), so this is additive.
+- **Status:** new
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                    | Suggested issue title                                                              | Ready for `/10x-plan` | Notes                                                          |
@@ -154,6 +168,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-03       | modifier-to-recommendation-loop | [GainPace] Modifier screen → AI recommendation loop → workout selection          | no                    | Proposed: S-01 + S-02 must ship first                         |
 | S-04       | training-arc-context         | [GainPace] Training arc one-liner per AI recommendation                            | no                    | Proposed: S-03 must ship first                                 |
 | S-05       | workout-step-detail          | [GainPace] Structured per-option workout breakdown (summary + expandable steps, guarded paces) | yes           | Prereqs S-03 + S-04 done — run `/10x-plan workout-step-detail`  |
+| S-06       | recovery-conflict-warning    | [GainPace] Low-recovery caution under a hard option when pushing high intensity     | yes           | Prereq S-05 (implemented). Design locked — run `/10x-plan recovery-conflict-warning` |
 
 ## Open Roadmap Questions
 
