@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import { ANTHROPIC_API_KEY } from "astro:env/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
@@ -29,7 +29,7 @@ import {
 type TypedSupabase = SupabaseClient<Database>;
 
 const MODEL = "claude-haiku-4-5";
-const TIMEOUT_MS = 9_000; // stay inside the 10s p95 NFR
+const TIMEOUT_MS = 20_000; // per-attempt cap; raised from 9s — a structured, multi-step generation occasionally needs longer
 const MAX_TOKENS = 2048; // the structured output is small
 const DAILY_CAP = 10; // soft per-user daily generation cap
 const RANKS = ["primary", "alt_1", "alt_2"] as const;
@@ -212,7 +212,10 @@ export async function generateRecommendation(
         output_config: { format: { type: "json_schema", schema: RECOMMENDATION_JSON_SCHEMA } },
       });
     } catch (err) {
-      throw new LlmError(`Anthropic call failed: ${err instanceof Error ? err.message : String(err)}`);
+      if (err instanceof APIConnectionTimeoutError) {
+        throw new LlmError("Timed out waiting for your recommendation. Please try again.");
+      }
+      throw new LlmError(`Recommendation request failed: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     inputTokens += message.usage.input_tokens;
