@@ -319,12 +319,12 @@ One additive, nullable JSONB column — no backfill. Pre-existing `workout_selec
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npm run build`
-- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.1 Type checking passes: `npm run build` — efcaa26
+- [x] 4.2 Linting passes: `npm run lint` — efcaa26
 
 #### Manual
 
-- [x] 4.3 Cards show the summary; structured session has a working expand with correct steps; single-step run shows no toggle
-- [x] 4.4 After committing and reloading, the committed block shows summary + expandable steps
-- [x] 4.5 Older committed selection (null detail) renders cleanly
-- [x] 4.6 No regression to the S-03/S-04 modifier → results → commit → reload flow
+- [x] 4.3 Cards show the summary; structured session has a working expand with correct steps; single-step run shows no toggle — efcaa26
+- [x] 4.4 After committing and reloading, the committed block shows summary + expandable steps — efcaa26
+- [x] 4.5 Older committed selection (null detail) renders cleanly — efcaa26
+- [x] 4.6 No regression to the S-03/S-04 modifier → results → commit → reload flow — efcaa26
