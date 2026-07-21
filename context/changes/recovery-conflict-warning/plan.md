@@ -298,31 +298,31 @@ One additive, nullable TEXT column — no backfill. Pre-existing `workout_select
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 `npx astro check`: only the 1 known select.ts error remains (mapping now populates recovery_warning) — full green deferred to Phase 3 (adapted)
-- [x] 2.4 Existing tests still pass: `npm run test`
+- [x] 2.1 Type checking passes: `npm run build` — a85fc66
+- [x] 2.2 Linting passes: `npm run lint` — a85fc66
+- [x] 2.3 `npx astro check`: only the 1 known select.ts error remains (mapping now populates recovery_warning) — full green deferred to Phase 3 (adapted) — a85fc66
+- [x] 2.4 Existing tests still pass: `npm run test` — a85fc66
 
 #### Manual
 
-- [x] 2.5 `intensity=high` + body battery < 20 → `recovery_warning` on hard alternatives, null on lighter ones
-- [x] 2.6 `intensity=normal` / body battery ≥ 20 / recovery missing → `recovery_warning: null` everywhere
-- [x] 2.7 Hard option with no model warning under a set flag gets the static fallback
-- [x] 2.8 `evt:"recommendation"` log emits `recoveryConflict`; no extra re-prompts caused by this field
+- [x] 2.5 `intensity=high` + body battery < 20 → `recovery_warning` on hard alternatives, null on lighter ones — a85fc66
+- [x] 2.6 `intensity=normal` / body battery ≥ 20 / recovery missing → `recovery_warning: null` everywhere — a85fc66
+- [x] 2.7 Hard option with no model warning under a set flag gets the static fallback — a85fc66
+- [x] 2.8 `evt:"recommendation"` log emits `recoveryConflict`; no extra re-prompts caused by this field — a85fc66
 
 ### Phase 3: Persistence
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npm run build`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 No type errors in `src/`: `npx astro check`
+- [x] 3.1 Type checking passes: `npm run build`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 No type errors in `src/`: `npx astro check`
 
 #### Manual
 
-- [ ] 3.4 Committing a hard alternative under a set flag persists non-null `recovery_warning`
-- [ ] 3.5 Committing a lighter alternative / no flag persists `recovery_warning = null`
-- [ ] 3.6 Reloading returns the committed selection with `recovery_warning` as saved
+- [x] 3.4 Committing a hard alternative under a set flag persists non-null `recovery_warning`
+- [x] 3.5 Committing a lighter alternative / no flag persists `recovery_warning = null`
+- [x] 3.6 Reloading returns the committed selection with `recovery_warning` as saved
 
 ### Phase 4: Render (amber caution line)
 

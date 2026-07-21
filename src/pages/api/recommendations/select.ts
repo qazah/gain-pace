@@ -19,6 +19,7 @@ const body = z.object({
     duration_minutes: z.number().int().positive(),
     ai_explanation: z.string().min(1),
     training_arc_note: z.string().nullable(),
+    recovery_warning: z.string().nullable(), // S-06: low-recovery caution for the committed pick
     // S-05: the structured breakdown committed alongside the flat fields.
     summary: z.string().min(1),
     steps: z

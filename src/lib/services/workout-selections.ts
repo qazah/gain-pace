@@ -77,6 +77,7 @@ export async function saveSelection(
     duration_minutes: input.alternative.duration_minutes,
     ai_explanation: input.alternative.ai_explanation,
     training_arc_note: input.alternative.training_arc_note, // null in S-03
+    recovery_warning: input.alternative.recovery_warning, // S-06: low-recovery caution (null unless conflict + hard)
     modifier_time_available: input.modifiers.time_available_minutes,
     modifier_intensity: input.modifiers.intensity,
     modifier_feeling: input.modifiers.feeling,
