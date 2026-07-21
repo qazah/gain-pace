@@ -161,9 +161,20 @@ export interface DurationBand {
   maxMinutes: number;
 }
 
-/** Derive a plausible per-session duration band from recent activities. */
+/**
+ * Recent RUNS only — cross-training (cycling, swims, etc.) pollutes both the
+ * duration band and the easy-pace anchor that the guardrails are built on.
+ * Matches "running", "trail_running", "treadmill_running", …; a null/unknown
+ * type is excluded (better to fall back to caps than anchor on a non-run).
+ */
+function isRun(activity: GarminActivity): boolean {
+  return activity.type?.toLowerCase().includes("run") ?? false;
+}
+
+/** Derive a plausible per-session duration band from recent runs. */
 export function deriveDurationBand(activities: GarminActivity[]): DurationBand {
   const durations = activities
+    .filter(isRun)
     .map((a) => a.durationSeconds)
     .filter((s): s is number => typeof s === "number" && s > 0)
     .map((s) => s / 60);
@@ -228,9 +239,9 @@ export const DURATION_SUM_TOLERANCE = 0.15;
  * interval) admit a spread. Tune during manual verification.
  */
 export const EFFORT_PACE_MULTIPLIERS: Record<WorkoutEffort, { lo: number; hi: number }> = {
-  warmup: { lo: 1.0, hi: 1.0 },
-  cooldown: { lo: 1.0, hi: 1.0 },
-  easy: { lo: 1.0, hi: 1.0 },
+  warmup: { lo: 1.0, hi: 1.2 }, // warm-ups often run slower than easy
+  cooldown: { lo: 1.0, hi: 1.2 }, // cool-downs often run slower than easy
+  easy: { lo: 1.0, hi: 1.1 }, // easy tolerates a touch slower
   recovery: { lo: 1.0, hi: 1.15 }, // jog between reps: easy or slower
   steady: { lo: 0.93, hi: 0.93 },
   tempo: { lo: 0.88, hi: 0.88 },
@@ -251,6 +262,7 @@ export interface PaceBand {
 export function deriveEasyPace(activities: GarminActivity[]): number | null {
   const paces: number[] = [];
   for (const a of activities) {
+    if (!isRun(a)) continue;
     const meters = a.distanceMeters;
     const seconds = a.durationSeconds;
     if (meters != null && meters > 0 && seconds != null && seconds > 0) {

@@ -43,7 +43,7 @@ all manual checks confirmed by the user.
   - Tradeoff: Guardrail functions stay type-blind (misusable by a future caller).
   - Confidence: MED — verify the model-context slice still behaves.
   - Blind spot: Whether other consumers rely on the unfiltered list.
-- **Decision**: PENDING
+- **Decision**: FIXED via Fix A — added isRun() (type includes "run"; null excluded) to deriveEasyPace + deriveDurationBand.
 
 ### F2 — Warmup/cooldown pace band rejects legitimate slower paces
 
@@ -53,7 +53,7 @@ all manual checks confirmed by the user.
 - **Location**: src/lib/recommendation-guardrail.ts:230-282
 - **Detail**: warmup/cooldown use multiplier 1.0 with ±8% tolerance → band [0.92E, 1.08E]. Runners routinely warm up / cool down slower than easy (1.10–1.20E); only `recovery` allows up to ~1.24E. A warmup at 1.15E is rejected → one re-prompt (recommendations.ts:199) → LlmError → 502. Over-tight bands become user-facing generation failures. The plan's table (matched exactly) flagged these multipliers as "tune during manual verification."
 - **Fix**: Widen the slow side for gentle efforts — e.g. warmup/cooldown { lo: 1.0, hi: 1.20 } and easy { lo: 1.0, hi: 1.10 } — so slower-than-easy warm/cool passes while still bounded. (Happy path already verified in 2.4–2.6; this hardens the tail case.)
-- **Decision**: PENDING
+- **Decision**: FIXED — warmup/cooldown hi 1.20, easy hi 1.10.
 
 ### F3 — New pace-guardrail functions have no automated coverage
 
