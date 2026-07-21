@@ -1,4 +1,4 @@
-import { CalendarCheck, Loader2, RotateCw, Sparkles, Target, TrendingUp } from "lucide-react";
+import { CalendarCheck, Loader2, RotateCw, Sparkles, Target, TrendingUp, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRecommendation } from "@/components/hooks/useRecommendation";
 import ModifierForm from "./ModifierForm";
@@ -113,6 +113,12 @@ export default function RecommendationSection() {
             </div>
             {today.workout_detail ? (
               <WorkoutDetailView summary={today.workout_detail.summary} steps={today.workout_detail.steps} />
+            ) : null}
+            {today.recovery_warning ? (
+              <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-200">
+                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                <span>{today.recovery_warning}</span>
+              </div>
             ) : null}
             <p className="mt-0.5 text-xs text-blue-100/70">{today.ai_explanation}</p>
             {today.training_arc_note ? (

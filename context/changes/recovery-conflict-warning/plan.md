@@ -314,27 +314,27 @@ One additive, nullable TEXT column — no backfill. Pre-existing `workout_select
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npm run build`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 No type errors in `src/`: `npx astro check`
+- [x] 3.1 Type checking passes: `npm run build` — 3a1cbda
+- [x] 3.2 Linting passes: `npm run lint` — 3a1cbda
+- [x] 3.3 No type errors in `src/`: `npx astro check` — 3a1cbda
 
 #### Manual
 
-- [x] 3.4 Committing a hard alternative under a set flag persists non-null `recovery_warning`
-- [x] 3.5 Committing a lighter alternative / no flag persists `recovery_warning = null`
-- [x] 3.6 Reloading returns the committed selection with `recovery_warning` as saved
+- [x] 3.4 Committing a hard alternative under a set flag persists non-null `recovery_warning` — 3a1cbda
+- [x] 3.5 Committing a lighter alternative / no flag persists `recovery_warning = null` — 3a1cbda
+- [x] 3.6 Reloading returns the committed selection with `recovery_warning` as saved — 3a1cbda
 
 ### Phase 4: Render (amber caution line)
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npm run build`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 No type errors in `src/`: `npx astro check`
+- [x] 4.1 Type checking passes: `npm run build`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 No type errors in `src/`: `npx astro check`
 
 #### Manual
 
-- [ ] 4.4 Hard alternative under a set flag shows the amber caution; lighter ones don't; no flag → none
-- [ ] 4.5 After committing a hard option and reloading, the committed block shows the caution
-- [ ] 4.6 Committed selection with null `recovery_warning` renders cleanly
-- [ ] 4.7 No regression to the S-03/S-04/S-05 modifier → results → commit → reload flow
+- [x] 4.4 Hard alternative under a set flag shows the amber caution; lighter ones don't; no flag → none
+- [x] 4.5 After committing a hard option and reloading, the committed block shows the caution
+- [x] 4.6 Committed selection with null `recovery_warning` renders cleanly
+- [x] 4.7 No regression to the S-03/S-04/S-05 modifier → results → commit → reload flow

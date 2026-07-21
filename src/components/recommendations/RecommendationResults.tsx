@@ -44,6 +44,12 @@ function Card({
         {formatDuration(alt.duration_minutes)}
       </div>
       <WorkoutDetailView summary={alt.summary} steps={alt.steps} />
+      {alt.recovery_warning ? (
+        <div className="mb-2 flex items-start gap-1.5 text-xs text-amber-200">
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+          <span>{alt.recovery_warning}</span>
+        </div>
+      ) : null}
       <p className="mb-2 text-sm text-blue-100/80">{alt.ai_explanation}</p>
       {alt.training_arc_note ? (
         <div className="mb-3 flex items-start gap-1.5 text-xs text-blue-100/60">
