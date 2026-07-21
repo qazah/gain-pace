@@ -328,13 +328,13 @@ One additive, nullable TEXT column — no backfill. Pre-existing `workout_select
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npm run build`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 No type errors in `src/`: `npx astro check`
+- [x] 4.1 Type checking passes: `npm run build` — 53a906f
+- [x] 4.2 Linting passes: `npm run lint` — 53a906f
+- [x] 4.3 No type errors in `src/`: `npx astro check` — 53a906f
 
 #### Manual
 
-- [x] 4.4 Hard alternative under a set flag shows the amber caution; lighter ones don't; no flag → none
-- [x] 4.5 After committing a hard option and reloading, the committed block shows the caution
-- [x] 4.6 Committed selection with null `recovery_warning` renders cleanly
-- [x] 4.7 No regression to the S-03/S-04/S-05 modifier → results → commit → reload flow
+- [x] 4.4 Hard alternative under a set flag shows the amber caution; lighter ones don't; no flag → none — 53a906f
+- [x] 4.5 After committing a hard option and reloading, the committed block shows the caution — 53a906f
+- [x] 4.6 Committed selection with null `recovery_warning` renders cleanly — 53a906f
+- [x] 4.7 No regression to the S-03/S-04/S-05 modifier → results → commit → reload flow — 53a906f
