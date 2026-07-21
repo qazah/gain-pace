@@ -11,7 +11,12 @@ import type {
 } from "@/types";
 import { getDashboardData } from "./garmin";
 import { getActiveRaceGoal } from "./race-goals";
-import { RECOMMENDATION_JSON_SCHEMA, parseRecommendation, validateAlternatives } from "@/lib/recommendation-guardrail";
+import {
+  RECOMMENDATION_JSON_SCHEMA,
+  parseRecommendation,
+  validateAlternatives,
+  validateWorkoutStructure,
+} from "@/lib/recommendation-guardrail";
 
 /**
  * Worker-side recommendation service (S-03). Fuses Garmin data + active race
@@ -99,10 +104,13 @@ const SYSTEM_PROMPT = [
   "You are a running coach that adapts today's workout to the runner's real state.",
   "You will receive the runner's recent activities, last night's recovery metrics, their race goal, and today's modifiers (time available, intensity preference, how they feel).",
   "Return exactly 3 workout alternatives, ordered best-fit-first: the first is your primary recommendation, the other two are 'if you prefer' options.",
-  "Each alternative has four fields:",
+  "Each alternative has six fields:",
   "workout_type is a short label; duration_minutes is an integer.",
   "ai_explanation is one or two plain-language sentences (no jargon, no raw numbers) about why this workout fits the runner TODAY — their recovery state, their available time, and how they feel. Keep it about today's readiness; do not talk about the race goal or long-term progress here.",
   "training_arc_note is exactly one plain-language sentence (no jargon, no raw numbers) that frames THIS specific option as a choice: what the runner GAINS by picking it and what they TRADE, in terms of long-term progress toward their race goal over the weeks to race day (for example: staying on pace to the goal as the best-balanced call, banking recovery now to train harder in the coming days, or speeding up fitness gains at the cost of more fatigue tomorrow). Across the three alternatives make these notes clearly distinct, so the runner can see why they would choose one over another. It is about the long-term trade of this choice, not today's fit, and must not repeat ai_explanation.",
+  'summary is ONE short line the runner reads under the workout name: duration + effort + target pace, e.g. "45 min easy 6:15/km" or "50 min with 5x3 min at threshold".',
+  'steps is an ordered list of TIME-BASED segments that together make up the session. Each step has: effort (exactly one of: warmup, easy, steady, tempo, threshold, interval, recovery, cooldown); duration_minutes (a positive integer); and target_pace as minutes:seconds per km (e.g. "6:15"). A plain continuous run is a SINGLE step. For interval sessions, emit each repetition as its own segment (e.g. 5x [1 min interval, 2 min recovery] becomes 10 segments) and compress the repeat only in the summary. The step durations MUST sum to the alternative\'s duration_minutes.',
+  "Target paces must be realistic for THIS runner given their recent runs: easy/warmup/cooldown/recovery segments at or near their recent easy pace, and only higher-effort segments (steady/tempo/threshold/interval) meaningfully faster. Never prescribe a pace the runner could not hold.",
   "Safety: never prescribe a volume or intensity implausible given the runner's last few activities. Keep durations sensible relative to their recent sessions and today's available time. Respect the modifiers — a tired runner or a short time window means a lighter/shorter session.",
 ].join(" ");
 
@@ -185,6 +193,7 @@ export async function generateRecommendation(
   let outputTokens = 0;
   let alternatives: WorkoutAlternative[] | null = null;
   let lastViolations = "";
+  let easyPaceSeconds: number | null = null;
 
   // 3. Up to two attempts: one initial + one bounded guardrail re-prompt.
   for (let attempt = 1; attempt <= 2 && !alternatives; attempt++) {
@@ -233,12 +242,27 @@ export async function generateRecommendation(
       continue;
     }
 
+    // S-05: pace plausibility + duration-sum consistency, same one-shot re-prompt
+    // discipline as the duration guardrail — an implausible pace is never shipped.
+    const structure = validateWorkoutStructure(parsed.data.alternatives, dashboard.activities);
+    easyPaceSeconds = structure.easyPaceSeconds;
+    if (!structure.ok) {
+      lastViolations = `${structure.violations.join("; ")}. Ground every target pace in the runner's recent runs and make each alternative's step durations sum to its total.`;
+      continue;
+    }
+
     alternatives = parsed.data.alternatives.map((alt, i) => ({
       rank: RANKS[i],
       workout_type: alt.workout_type,
       duration_minutes: alt.duration_minutes,
       ai_explanation: alt.ai_explanation,
       training_arc_note: alt.training_arc_note, // S-04: long-term arc note (null when the model omitted/blanked it)
+      summary: alt.summary, // S-05: model-authored one-liner
+      steps: alt.steps.map((s) => ({
+        effort: s.effort,
+        duration_minutes: s.duration_minutes,
+        target_pace: s.target_pace, // keep the "m:ss" display string; the seconds form was for the guardrail
+      })),
     }));
   }
 
@@ -252,6 +276,7 @@ export async function generateRecommendation(
       inputTokens,
       outputTokens,
       ok: alternatives != null,
+      easyPaceSeconds, // S-05: null when history too thin (pace band fell back to absolute caps)
       lastViolations: alternatives ? null : lastViolations,
     }),
   );

@@ -281,27 +281,27 @@ One additive, nullable JSONB column — no backfill. Pre-existing `workout_selec
 
 #### Automated
 
-- [x] 1.1 Type checking passes: `npm run build`
-- [x] 1.2 Linting passes: `npm run lint`
+- [x] 1.1 Type checking passes: `npm run build` — 88deaea
+- [x] 1.2 Linting passes: `npm run lint` — 88deaea
 
 #### Manual
 
-- [x] 1.3 Migration applies cleanly to local Supabase; `workout_detail` exists as nullable JSONB
+- [x] 1.3 Migration applies cleanly to local Supabase; `workout_detail` exists as nullable JSONB — 88deaea
 
 ### Phase 2: AI contract, pace guardrail & service
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npm run build`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Existing tests still pass: `npm run test`
+- [x] 2.1 Type checking passes: `npm run build`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Existing tests still pass: `npm run test`
 
 #### Manual
 
-- [ ] 2.4 `POST /api/recommendations` returns summary + steps; paces realistic; durations sum ≈ total
-- [ ] 2.5 Structured session shows interval segments; plain easy run returns a single step
-- [ ] 2.6 Implausible pace triggers re-prompt then typed error — no bad pace shipped
-- [ ] 2.7 Recommendation log still emits and the call stays within the ~10s budget
+- [x] 2.4 `POST /api/recommendations` returns summary + steps; paces realistic; durations sum ≈ total
+- [x] 2.5 Structured session shows interval segments; plain easy run returns a single step
+- [x] 2.6 Implausible pace triggers re-prompt then typed error — no bad pace shipped
+- [x] 2.7 Recommendation log still emits and the call stays within the ~10s budget
 
 ### Phase 3: Persistence
 

@@ -69,9 +69,31 @@ describe("validateAlternatives", () => {
 describe("parseRecommendation", () => {
   const good = {
     alternatives: [
-      { workout_type: "Easy run", duration_minutes: 40, ai_explanation: "Recovery-friendly." },
-      { workout_type: "Tempo", duration_minutes: 50, ai_explanation: "Builds threshold." },
-      { workout_type: "Intervals", duration_minutes: 45, ai_explanation: "Sharpens speed." },
+      {
+        workout_type: "Easy run",
+        duration_minutes: 40,
+        ai_explanation: "Recovery-friendly.",
+        summary: "40 min easy 6:00/km",
+        steps: [{ effort: "easy", duration_minutes: 40, target_pace: "6:00" }],
+      },
+      {
+        workout_type: "Tempo",
+        duration_minutes: 50,
+        ai_explanation: "Builds threshold.",
+        summary: "50 min with 20 min tempo",
+        steps: [
+          { effort: "warmup", duration_minutes: 15, target_pace: "6:00" },
+          { effort: "tempo", duration_minutes: 20, target_pace: "5:10" },
+          { effort: "cooldown", duration_minutes: 15, target_pace: "6:00" },
+        ],
+      },
+      {
+        workout_type: "Intervals",
+        duration_minutes: 45,
+        ai_explanation: "Sharpens speed.",
+        summary: "45 min easy 6:00/km",
+        steps: [{ effort: "easy", duration_minutes: 45, target_pace: "6:00" }],
+      },
     ],
   };
 
