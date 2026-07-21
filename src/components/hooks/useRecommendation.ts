@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import type { RecommendationResult, WorkoutModifiers, WorkoutSelection } from "@/types";
+import type { RecommendationResult, WorkoutModifiers } from "@/types";
+import type { WorkoutSelectionWithDetail } from "@/lib/services/workout-selections";
 
 type Status = "loading" | "idle" | "generating" | "results" | "error" | "not_ready" | "rate_limited";
 
 interface State {
   status: Status;
   /** Today's committed workout (if the runner already selected one). */
-  today: WorkoutSelection | null;
+  today: WorkoutSelectionWithDetail | null;
   /** The current generation's result (when status === "results"). */
   result: RecommendationResult | null;
   /** Form-level error message (when status === "error"). */
@@ -42,7 +43,7 @@ export function useRecommendation() {
         setState((s) => ({ ...s, status: "error", error: "Your session expired — please sign in again." }));
         return;
       }
-      const json = (await res.json()) as { selection?: WorkoutSelection | null };
+      const json = (await res.json()) as { selection?: WorkoutSelectionWithDetail | null };
       setState((s) => ({ ...s, status: "idle", today: json.selection ?? null }));
     } catch {
       setState((s) => ({ ...s, status: "error", error: "Couldn't reach the server. Please retry." }));
@@ -104,7 +105,7 @@ export function useRecommendation() {
           setState((s) => ({ ...s, status: "error", error: "Your session expired — please sign in again." }));
           return;
         }
-        const json = (await res.json()) as { status: string; selection?: WorkoutSelection };
+        const json = (await res.json()) as { status: string; selection?: WorkoutSelectionWithDetail };
         if (json.status === "ok" && json.selection) {
           setState((s) => ({ ...s, today: json.selection ?? null, committedRank: rank }));
         }

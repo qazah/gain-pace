@@ -4,6 +4,7 @@ import { useRecommendation } from "@/components/hooks/useRecommendation";
 import ModifierForm from "./ModifierForm";
 import RecommendationSkeleton from "./RecommendationSkeleton";
 import RecommendationResults from "./RecommendationResults";
+import WorkoutDetailView from "./WorkoutDetailView";
 
 /**
  * Client island (client:load) for the S-03 loop. Gates on prerequisites,
@@ -107,9 +108,12 @@ export default function RecommendationSection() {
         <div className="mb-4 flex items-start gap-3 rounded-xl border border-green-400/30 bg-green-900/15 px-4 py-3">
           <CalendarCheck className="mt-0.5 size-5 shrink-0 text-green-300" />
           <div>
-            <div className="text-sm font-medium text-white">
+            <div className="mb-1 text-sm font-medium text-white">
               Committed: {today.workout_type} · {formatDuration(today.duration_minutes)}
             </div>
+            {today.workout_detail ? (
+              <WorkoutDetailView summary={today.workout_detail.summary} steps={today.workout_detail.steps} />
+            ) : null}
             <p className="mt-0.5 text-xs text-blue-100/70">{today.ai_explanation}</p>
             {today.training_arc_note ? (
               <div className="mt-1 flex items-start gap-1.5 text-xs text-blue-100/60">

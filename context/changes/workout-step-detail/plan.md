@@ -307,24 +307,24 @@ One additive, nullable JSONB column — no backfill. Pre-existing `workout_selec
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npm run build`
-- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.1 Type checking passes: `npm run build` — abbe991
+- [x] 3.2 Linting passes: `npm run lint` — abbe991
 
 #### Manual
 
-- [x] 3.3 Committing persists a non-null `workout_detail` (summary + steps) to `workout_selections`
-- [x] 3.4 Reloading returns the committed selection with `workout_detail` populated
+- [x] 3.3 Committing persists a non-null `workout_detail` (summary + steps) to `workout_selections` — abbe991
+- [x] 3.4 Reloading returns the committed selection with `workout_detail` populated — abbe991
 
 ### Phase 4: Render (summary + expandable steps)
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npm run build`
-- [ ] 4.2 Linting passes: `npm run lint`
+- [x] 4.1 Type checking passes: `npm run build`
+- [x] 4.2 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 4.3 Cards show the summary; structured session has a working expand with correct steps; single-step run shows no toggle
-- [ ] 4.4 After committing and reloading, the committed block shows summary + expandable steps
-- [ ] 4.5 Older committed selection (null detail) renders cleanly
-- [ ] 4.6 No regression to the S-03/S-04 modifier → results → commit → reload flow
+- [x] 4.3 Cards show the summary; structured session has a working expand with correct steps; single-step run shows no toggle
+- [x] 4.4 After committing and reloading, the committed block shows summary + expandable steps
+- [x] 4.5 Older committed selection (null detail) renders cleanly
+- [x] 4.6 No regression to the S-03/S-04 modifier → results → commit → reload flow

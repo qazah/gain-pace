@@ -2,6 +2,7 @@ import { Check, Clock, Star, TrendingUp, TriangleAlert } from "lucide-react";
 import type { RecommendationResult, WorkoutAlternative } from "@/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import WorkoutDetailView from "./WorkoutDetailView";
 
 interface Props {
   result: RecommendationResult;
@@ -42,6 +43,7 @@ function Card({
         <Clock className="size-3.5" />
         {formatDuration(alt.duration_minutes)}
       </div>
+      <WorkoutDetailView summary={alt.summary} steps={alt.steps} />
       <p className="mb-2 text-sm text-blue-100/80">{alt.ai_explanation}</p>
       {alt.training_arc_note ? (
         <div className="mb-3 flex items-start gap-1.5 text-xs text-blue-100/60">
