@@ -157,6 +157,7 @@ export type Database = {
           selected_date: string
           training_arc_note: string | null
           user_id: string
+          workout_detail: Json | null
           workout_type: string
         }
         Insert: {
@@ -173,6 +174,7 @@ export type Database = {
           selected_date?: string
           training_arc_note?: string | null
           user_id: string
+          workout_detail?: Json | null
           workout_type: string
         }
         Update: {
@@ -189,6 +191,7 @@ export type Database = {
           selected_date?: string
           training_arc_note?: string | null
           user_id?: string
+          workout_detail?: Json | null
           workout_type?: string
         }
         Relationships: [

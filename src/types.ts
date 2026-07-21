@@ -28,6 +28,25 @@ export interface WorkoutModifiers {
   feeling: "tired" | "normal" | "energized";
 }
 
+// ---- Structured workout detail DTOs (S-05) ----
+// Each alternative carries a model-authored one-line `summary` plus an ordered
+// list of time-based `steps`. Paces are `"m:ss"`/km display strings; the
+// guardrail parses them to sec/km for plausibility validation.
+
+export type WorkoutEffort = "warmup" | "easy" | "steady" | "tempo" | "threshold" | "interval" | "recovery" | "cooldown";
+
+export interface WorkoutStep {
+  effort: WorkoutEffort;
+  duration_minutes: number;
+  /** Target pace per km as an "m:ss" display string (e.g. "6:15"). */
+  target_pace: string;
+}
+
+export interface WorkoutDetail {
+  summary: string;
+  steps: WorkoutStep[];
+}
+
 export interface WorkoutAlternative {
   rank: "primary" | "alt_1" | "alt_2";
   workout_type: string;
@@ -35,6 +54,10 @@ export interface WorkoutAlternative {
   ai_explanation: string;
   /** Reserved for S-04 (training-arc note); null in S-03. */
   training_arc_note: string | null;
+  /** One-line prescription under the name (duration + effort + pace), S-05. */
+  summary: string;
+  /** Ordered time-based segments; always ≥1 (a plain run is a single step). */
+  steps: WorkoutStep[];
 }
 
 export interface RecommendationResult {
