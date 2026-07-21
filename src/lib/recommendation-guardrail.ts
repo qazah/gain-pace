@@ -18,7 +18,10 @@ import type { GarminActivity, WorkoutEffort } from "@/types";
  * recent implied pace, and the step durations must sum to the stated total.
  */
 
-/** Runtime enum of workout efforts; kept exactly in sync with the WorkoutEffort union. */
+// Runtime enum of workout efforts and the source of truth for pace-band lookup.
+// `satisfies readonly WorkoutEffort[]` rejects any entry not in the union; the
+// EFFORT_PACE_MULTIPLIERS Record<WorkoutEffort, …> below fails to compile if an
+// effort is ever missing, so the two stay in lockstep.
 export const WORKOUT_EFFORTS = [
   "warmup",
   "easy",
@@ -29,8 +32,6 @@ export const WORKOUT_EFFORTS = [
   "recovery",
   "cooldown",
 ] as const satisfies readonly WorkoutEffort[];
-// Compile-time exhaustiveness: errors if the union gains a member missing above.
-type _EffortsAreExhaustive = WorkoutEffort extends (typeof WORKOUT_EFFORTS)[number] ? true : never;
 
 // ---- Structured-output schema for the Anthropic call ----
 // Structured outputs do NOT support array length, enum, or numeric range

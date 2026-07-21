@@ -292,28 +292,28 @@ One additive, nullable JSONB column — no backfill. Pre-existing `workout_selec
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npm run build`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Existing tests still pass: `npm run test`
+- [x] 2.1 Type checking passes: `npm run build` — 06e577b
+- [x] 2.2 Linting passes: `npm run lint` — 06e577b
+- [x] 2.3 Existing tests still pass: `npm run test` — 06e577b
 
 #### Manual
 
-- [x] 2.4 `POST /api/recommendations` returns summary + steps; paces realistic; durations sum ≈ total
-- [x] 2.5 Structured session shows interval segments; plain easy run returns a single step
-- [x] 2.6 Implausible pace triggers re-prompt then typed error — no bad pace shipped
-- [x] 2.7 Recommendation log still emits and the call stays within the ~10s budget
+- [x] 2.4 `POST /api/recommendations` returns summary + steps; paces realistic; durations sum ≈ total — 06e577b
+- [x] 2.5 Structured session shows interval segments; plain easy run returns a single step — 06e577b
+- [x] 2.6 Implausible pace triggers re-prompt then typed error — no bad pace shipped — 06e577b
+- [x] 2.7 Recommendation log still emits and the call stays within the ~10s budget — 06e577b
 
 ### Phase 3: Persistence
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npm run build`
-- [ ] 3.2 Linting passes: `npm run lint`
+- [x] 3.1 Type checking passes: `npm run build`
+- [x] 3.2 Linting passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.3 Committing persists a non-null `workout_detail` (summary + steps) to `workout_selections`
-- [ ] 3.4 Reloading returns the committed selection with `workout_detail` populated
+- [x] 3.3 Committing persists a non-null `workout_detail` (summary + steps) to `workout_selections`
+- [x] 3.4 Reloading returns the committed selection with `workout_detail` populated
 
 ### Phase 4: Render (summary + expandable steps)
 

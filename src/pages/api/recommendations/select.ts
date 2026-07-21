@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { z } from "astro/zod";
 import { createClient } from "@/lib/supabase";
 import { getTodaySelection, saveSelection, WorkoutSelectionError } from "@/lib/services/workout-selections";
+import { WORKOUT_EFFORTS } from "@/lib/recommendation-guardrail";
 
 /**
  * Workout selection API (S-03).
@@ -18,6 +19,17 @@ const body = z.object({
     duration_minutes: z.number().int().positive(),
     ai_explanation: z.string().min(1),
     training_arc_note: z.string().nullable(),
+    // S-05: the structured breakdown committed alongside the flat fields.
+    summary: z.string().min(1),
+    steps: z
+      .array(
+        z.object({
+          effort: z.enum(WORKOUT_EFFORTS),
+          duration_minutes: z.number().int().positive(),
+          target_pace: z.string().min(1),
+        }),
+      )
+      .min(1),
   }),
   context: z.object({
     modifiers: z.object({

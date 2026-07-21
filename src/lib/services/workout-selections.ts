@@ -1,16 +1,31 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import type { WorkoutAlternative, WorkoutModifiers, WorkoutSelection } from "@/types";
+import type { WorkoutAlternative, WorkoutDetail, WorkoutModifiers, WorkoutSelection } from "@/types";
 
 /**
  * Worker-side workout-selection service (S-03). Persists the runner's chosen
  * alternative as today's single committed workout (one row per user per day,
  * latest wins), following S-02's edit-in-place discipline — check for today's
  * row, update it in place if present, else insert. No transaction needed.
+ * S-05: also persists the structured breakdown as the `workout_detail` JSONB.
  */
 
 type TypedSupabase = SupabaseClient<Database>;
 type SnapshotJson = Database["public"]["Tables"]["workout_selections"]["Row"]["garmin_data_snapshot"];
+type DetailJson = NonNullable<Database["public"]["Tables"]["workout_selections"]["Row"]["workout_detail"]>;
+
+/**
+ * A selection row with `workout_detail` narrowed from the raw `Json` column to
+ * the typed `WorkoutDetail | null` (null for pre-S-05 rows). This is the shape
+ * callers get so they don't re-cast the JSONB.
+ */
+export interface WorkoutSelectionWithDetail extends Omit<WorkoutSelection, "workout_detail"> {
+  workout_detail: WorkoutDetail | null;
+}
+
+function withDetail(row: WorkoutSelection): WorkoutSelectionWithDetail {
+  return { ...row, workout_detail: (row.workout_detail as WorkoutDetail | null) ?? null };
+}
 
 /** A workout_selections read/write failure — the API route maps this to a 502. */
 export class WorkoutSelectionError extends Error {
@@ -33,7 +48,10 @@ function todayIso(): string {
 }
 
 /** The runner's committed workout for today, or null if none selected yet. */
-export async function getTodaySelection(supabase: TypedSupabase, userId: string): Promise<WorkoutSelection | null> {
+export async function getTodaySelection(
+  supabase: TypedSupabase,
+  userId: string,
+): Promise<WorkoutSelectionWithDetail | null> {
   const { data, error } = await supabase
     .from("workout_selections")
     .select("*")
@@ -43,7 +61,7 @@ export async function getTodaySelection(supabase: TypedSupabase, userId: string)
   if (error) {
     throw new WorkoutSelectionError(`failed to load today's selection: ${error.message}`);
   }
-  return data ?? null;
+  return data ? withDetail(data) : null;
 }
 
 /** Persist the chosen alternative as today's selection (insert, or update in place). */
@@ -51,7 +69,7 @@ export async function saveSelection(
   supabase: TypedSupabase,
   userId: string,
   input: SaveSelectionInput,
-): Promise<WorkoutSelection> {
+): Promise<WorkoutSelectionWithDetail> {
   const row = {
     user_id: userId,
     alternative_rank: input.alternative.rank,
@@ -64,6 +82,13 @@ export async function saveSelection(
     modifier_feeling: input.modifiers.feeling,
     race_goal_id: input.raceGoalId,
     garmin_data_snapshot: input.garminSnapshot as SnapshotJson,
+    // S-05: the structured breakdown of the chosen alternative. Cast through
+    // `unknown` — WorkoutStep is an interface (no index signature) so it isn't
+    // directly comparable to the JSONB column's `Json` type.
+    workout_detail: {
+      summary: input.alternative.summary,
+      steps: input.alternative.steps,
+    } as unknown as DetailJson,
   };
 
   const existing = await getTodaySelection(supabase, userId);
@@ -79,12 +104,12 @@ export async function saveSelection(
     if (error) {
       throw new WorkoutSelectionError(`failed to update selection: ${error.message}`);
     }
-    return data;
+    return withDetail(data);
   }
 
   const { data, error } = await supabase.from("workout_selections").insert(row).select().single();
   if (error) {
     throw new WorkoutSelectionError(`failed to create selection: ${error.message}`);
   }
-  return data;
+  return withDetail(data);
 }
