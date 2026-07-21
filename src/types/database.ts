@@ -154,6 +154,7 @@ export type Database = {
           modifier_intensity: string | null
           modifier_time_available: number | null
           race_goal_id: string | null
+          recovery_warning: string | null
           selected_date: string
           training_arc_note: string | null
           user_id: string
@@ -171,6 +172,7 @@ export type Database = {
           modifier_intensity?: string | null
           modifier_time_available?: number | null
           race_goal_id?: string | null
+          recovery_warning?: string | null
           selected_date?: string
           training_arc_note?: string | null
           user_id: string
@@ -188,6 +190,7 @@ export type Database = {
           modifier_intensity?: string | null
           modifier_time_available?: number | null
           race_goal_id?: string | null
+          recovery_warning?: string | null
           selected_date?: string
           training_arc_note?: string | null
           user_id?: string

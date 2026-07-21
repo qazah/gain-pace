@@ -54,6 +54,12 @@ export interface WorkoutAlternative {
   ai_explanation: string;
   /** Reserved for S-04 (training-arc note); null in S-03. */
   training_arc_note: string | null;
+  /**
+   * S-06: one-line caution when a hard option is offered against low recovery
+   * (body battery < threshold + intensity=high). Null unless that conflict holds
+   * and the option is hard; the runner is never blocked, only informed.
+   */
+  recovery_warning: string | null;
   /** One-line prescription under the name (duration + effort + pace), S-05. */
   summary: string;
   /** Ordered time-based segments; always ≥1 (a plain run is a single step). */
