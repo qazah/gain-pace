@@ -13,6 +13,7 @@ import { getDashboardData } from "./garmin";
 import { getActiveRaceGoal } from "./race-goals";
 import {
   RECOMMENDATION_JSON_SCHEMA,
+  type ParsedRecommendation,
   isHardWorkout,
   isRecoveryConflict,
   parseRecommendation,
@@ -23,8 +24,9 @@ import {
 /**
  * Worker-side recommendation service (S-03). Fuses Garmin data + active race
  * goal + today's modifiers into one Claude Haiku structured-output call, guards
- * the result against implausible load (one bounded re-prompt), enforces a soft
- * daily cap, and returns a primary + 2 alternatives. Mirrors garmin.ts's typed
+ * the result against implausible load (bounded re-prompts, then graceful
+ * degradation to the individually-valid subset), enforces a soft daily cap, and
+ * returns up to 3 alternatives (primary first). Mirrors garmin.ts's typed
  * error taxonomy; the route maps each error to a stable JSON status.
  */
 
@@ -35,6 +37,12 @@ const TIMEOUT_MS = 20_000; // per-attempt cap; raised from 9s — a structured, 
 const MAX_TOKENS = 2048; // the structured output is small
 const DAILY_CAP = 10; // soft per-user daily generation cap
 const RANKS = ["primary", "alt_1", "alt_2"] as const;
+// Reliability (S-05 duration-sum / pace guardrails): one initial call plus up to
+// two bounded re-prompts for a fully-valid trio; the last attempt then salvages
+// whatever individually clears the guardrails, as long as at least MIN_ALTERNATIVES
+// survive — so a single implausible option never dead-ends the whole request.
+const MAX_ATTEMPTS = 3;
+const MIN_ALTERNATIVES = 2;
 
 // S-06: static fallback caution, used when the low-recovery flag is set but the
 // model left recovery_warning empty on a hard option — the signal never drops.
@@ -120,7 +128,7 @@ const SYSTEM_PROMPT = [
   "ai_explanation is one or two plain-language sentences (no jargon, no raw numbers) about why this workout fits the runner TODAY — their recovery state, their available time, and how they feel. Keep it about today's readiness; do not talk about the race goal or long-term progress here.",
   "training_arc_note is exactly one plain-language sentence (no jargon, no raw numbers) that frames THIS specific option as a choice: what the runner GAINS by picking it and what they TRADE, in terms of long-term progress toward their race goal over the weeks to race day (for example: staying on pace to the goal as the best-balanced call, banking recovery now to train harder in the coming days, or speeding up fitness gains at the cost of more fatigue tomorrow). Across the three alternatives make these notes clearly distinct, so the runner can see why they would choose one over another. It is about the long-term trade of this choice, not today's fit, and must not repeat ai_explanation.",
   'summary is ONE short line the runner reads under the workout name: duration + effort + target pace, e.g. "45 min easy 6:15/km" or "50 min with 5x3 min at threshold".',
-  'steps is an ordered list of TIME-BASED segments that together make up the session. Each step has: effort (exactly one of: warmup, easy, steady, tempo, threshold, interval, recovery, cooldown); duration_minutes (a positive integer); and target_pace as minutes:seconds per km (e.g. "6:15"). A plain continuous run is a SINGLE step. For interval sessions, emit each repetition as its own segment (e.g. 5x [1 min interval, 2 min recovery] becomes 10 segments) and compress the repeat only in the summary. The step durations MUST sum to the alternative\'s duration_minutes.',
+  'steps is an ordered list of TIME-BASED segments that together make up the session. Each step has: effort (exactly one of: warmup, easy, steady, tempo, threshold, interval, recovery, cooldown); duration_minutes (a positive integer); and target_pace as minutes:seconds per km (e.g. "6:15"). A plain continuous run is a SINGLE step. For interval sessions, emit each repetition as its own segment (e.g. 5x [1 min interval, 2 min recovery] becomes 10 segments) and compress the repeat only in the summary. CRITICAL: the step durations MUST add up to EXACTLY duration_minutes — include a warmup and a cooldown segment so the arithmetic closes (e.g. a 45-min session: 10 warmup + 25 main + 10 cooldown = 45). Before returning each alternative, sum its step durations and, if they do not equal duration_minutes, lengthen or shorten the warmup/cooldown until they do.',
   "Target paces must be realistic for THIS runner given their recent runs: easy/warmup/cooldown/recovery segments at or near their recent easy pace, and only higher-effort segments (steady/tempo/threshold/interval) meaningfully faster. Never prescribe a pace the runner could not hold.",
   "recovery_warning must be an empty string by default. Only set it when the user message explicitly says the runner's recovery is low for a hard session, and then only for HARD options (containing a tempo/threshold/interval segment) — one short, kind sentence; leave it empty for easier options.",
   "Safety: never prescribe a volume or intensity implausible given the runner's last few activities. Keep durations sensible relative to their recent sessions and today's available time. Respect the modifiers — a tired runner or a short time window means a lighter/shorter session.",
@@ -163,6 +171,37 @@ function buildUserContext(dashboard: GarminDashboardData, goal: RaceGoal, modifi
     null,
     2,
   );
+}
+
+type ParsedAlternative = ParsedRecommendation["alternatives"][number];
+
+/**
+ * Map a parsed, guardrail-cleared model alternative to the domain DTO at a given
+ * rank. Shared by the all-valid fast path and the graceful-degradation salvage
+ * path so ranking and the S-04/S-05/S-06 field wiring stay identical in both.
+ */
+function toWorkoutAlternative(
+  alt: ParsedAlternative,
+  rank: (typeof RANKS)[number],
+  recoveryConflict: boolean,
+): WorkoutAlternative {
+  return {
+    rank,
+    workout_type: alt.workout_type,
+    duration_minutes: alt.duration_minutes,
+    ai_explanation: alt.ai_explanation,
+    training_arc_note: alt.training_arc_note, // S-04: long-term arc note (null when the model omitted/blanked it)
+    // S-06: caution shows iff the conflict flag is set AND this option is hard;
+    // fall back to a static sentence so a set flag never leaves a hard option bare.
+    recovery_warning:
+      recoveryConflict && isHardWorkout(alt.steps) ? (alt.recovery_warning ?? RECOVERY_WARNING_FALLBACK) : null,
+    summary: alt.summary, // S-05: model-authored one-liner
+    steps: alt.steps.map((s) => ({
+      effort: s.effort,
+      duration_minutes: s.duration_minutes,
+      target_pace: s.target_pace, // keep the "m:ss" display string; the seconds form was for the guardrail
+    })),
+  };
 }
 
 function extractText(message: Anthropic.Message): string {
@@ -212,9 +251,11 @@ export async function generateRecommendation(
   let alternatives: WorkoutAlternative[] | null = null;
   let lastViolations = "";
   let easyPaceSeconds: number | null = null;
+  let degradedCount: number | null = null; // non-null (<3) when we shipped a salvaged partial set
 
-  // 3. Up to two attempts: one initial + one bounded guardrail re-prompt.
-  for (let attempt = 1; attempt <= 2 && !alternatives; attempt++) {
+  // 3. Up to MAX_ATTEMPTS: one initial call + bounded guardrail re-prompts. The
+  // final attempt salvages any individually-valid alternatives (graceful degradation).
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS && !alternatives; attempt++) {
     const userContent =
       attempt === 1
         ? baseContext
@@ -257,38 +298,46 @@ export async function generateRecommendation(
       continue;
     }
 
+    // Guardrails: implausible LOAD (duration/volume, S-03) and implausible
+    // STRUCTURE (pace bands + step-duration sum, S-05). Both are per-alternative
+    // independent, so one bad option never taints the others.
     const check = validateAlternatives(parsed.data.alternatives, dashboard.activities);
-    if (!check.ok) {
-      lastViolations = `${check.violations.join("; ")}. Keep every duration within ${check.band.minMinutes}-${check.band.maxMinutes} minutes.`;
-      continue;
-    }
-
-    // S-05: pace plausibility + duration-sum consistency, same one-shot re-prompt
-    // discipline as the duration guardrail — an implausible pace is never shipped.
     const structure = validateWorkoutStructure(parsed.data.alternatives, dashboard.activities);
     easyPaceSeconds = structure.easyPaceSeconds;
-    if (!structure.ok) {
-      lastViolations = `${structure.violations.join("; ")}. Ground every target pace in the runner's recent runs and make each alternative's step durations sum to its total.`;
-      continue;
+
+    if (check.ok && structure.ok) {
+      alternatives = parsed.data.alternatives.map((alt, i) => toWorkoutAlternative(alt, RANKS[i], recoveryConflict));
+      break;
     }
 
-    alternatives = parsed.data.alternatives.map((alt, i) => ({
-      rank: RANKS[i],
-      workout_type: alt.workout_type,
-      duration_minutes: alt.duration_minutes,
-      ai_explanation: alt.ai_explanation,
-      training_arc_note: alt.training_arc_note, // S-04: long-term arc note (null when the model omitted/blanked it)
-      // S-06: caution shows iff the conflict flag is set AND this option is hard;
-      // fall back to a static sentence so a set flag never leaves a hard option bare.
-      recovery_warning:
-        recoveryConflict && isHardWorkout(alt.steps) ? (alt.recovery_warning ?? RECOVERY_WARNING_FALLBACK) : null,
-      summary: alt.summary, // S-05: model-authored one-liner
-      steps: alt.steps.map((s) => ({
-        effort: s.effort,
-        duration_minutes: s.duration_minutes,
-        target_pace: s.target_pace, // keep the "m:ss" display string; the seconds form was for the guardrail
-      })),
-    }));
+    // Record why — feeds the next re-prompt's tail and the structured log.
+    lastViolations = [
+      check.ok
+        ? ""
+        : `${check.violations.join("; ")}. Keep every duration within ${check.band.minMinutes}-${check.band.maxMinutes} minutes.`,
+      structure.ok
+        ? ""
+        : `${structure.violations.join("; ")}. Ground every target pace in the runner's recent runs and make each alternative's step durations sum to its total.`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    // Earlier attempts: re-prompt for a fully-valid set of 3.
+    if (attempt < MAX_ATTEMPTS) continue;
+
+    // Final attempt still imperfect → graceful degradation. Ship only the
+    // alternatives that individually clear BOTH guardrails, re-ranked in order:
+    // an implausible option is dropped (never shipped), and we give up (throw
+    // below) only when fewer than MIN_ALTERNATIVES survive.
+    const survivors = parsed.data.alternatives.filter(
+      (alt) =>
+        validateAlternatives([alt], dashboard.activities).ok &&
+        validateWorkoutStructure([alt], dashboard.activities).ok,
+    );
+    if (survivors.length >= MIN_ALTERNATIVES) {
+      alternatives = survivors.map((alt, i) => toWorkoutAlternative(alt, RANKS[i], recoveryConflict));
+      degradedCount = survivors.length;
+    }
   }
 
   // 4. Structured log (wrangler tail): latency, tokens, guardrail outcome.
@@ -301,9 +350,10 @@ export async function generateRecommendation(
       inputTokens,
       outputTokens,
       ok: alternatives != null,
+      degraded: degradedCount, // reliability: non-null (<3) when a salvaged partial set shipped
       easyPaceSeconds, // S-05: null when history too thin (pace band fell back to absolute caps)
       recoveryConflict, // S-06: low body battery + high intensity → hard options carry a caution
-      lastViolations: alternatives ? null : lastViolations,
+      lastViolations: alternatives && degradedCount === null ? null : lastViolations || null,
     }),
   );
 
