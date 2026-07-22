@@ -3,7 +3,7 @@ project: "GainPace"
 version: 1
 status: draft
 created: 2026-06-04
-updated: 2026-07-22
+updated: 2026-07-23
 prd_version: 1
 main_goal: market-feedback
 top_blocker: external
@@ -38,6 +38,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | done     |
 | S-05 | workout-step-detail          | see a concrete prescription per option — a one-line summary (duration + effort + target pace) and, for structured sessions, an expandable step-by-step breakdown — with paces grounded in recent runs and guardrailed for plausibility | S-03, S-04    | FR-004, FR-005 (extends)      | ready    |
 | S-06 | recovery-conflict-warning    | see a caution note under a hard option when they ask for high intensity while their recovery (body battery) is low — informed by watch data, never blocking their choice | S-05          | FR-004, FR-005 (extends)      | done     |
+| S-07 | garmin-credential-control    | disconnect their Garmin account (deleting all stored credentials + snapshot) and, at connect time, opt out of credential storage entirely (cookie-only session, re-auth each new session) | S-01          | FR-001, Access Control        | ready    |
 
 ## Streams
 
@@ -47,6 +48,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | ------ | ----------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
 | A      | Integracja Garmin | `F-01` → `S-01` → `S-03` → `S-04` → `S-05` → `S-06` | Główna oś north star — całe AI zależy od danych Garmin z tego łańcucha.      |
 | B      | Cel treningowy    | `S-02`                             | Zależy od F-01 (ze Streamu A); dołącza do Streamu A jako drugie wejście S-03. |
+| C      | Prywatność / kontrola danych | `S-01` → `S-07`         | Higiena danych logowania Garmin. Zależy tylko od S-01; równolegle do łańcucha AI (S-03→S-06). |
 
 ## Baseline
 
@@ -158,6 +160,26 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Low-to-moderate. Reuses the S-03 re-prompt/guardrail scaffolding and S-05 steps; the deterministic flag keeps behavior testable. Main risk is threshold tuning (too low → never warns; too high → warns on healthy days) and ensuring the warning never becomes a de-facto block. Recovery data already flows to the model (verified in `recommendations.ts`), so this is additive.
 - **Status:** done
 
+### S-07: Garmin credential control & privacy
+
+- **Outcome:** a runner can (a) **disconnect** their Garmin account — one action that deletes their entire `garmin_credentials` row (live session blob, AES-GCM–encrypted password, and cached snapshot), returning them to the not-connected state while leaving `workout_selections` and `race_goals` intact; and (b) at connect time, tick a **"don't store my Garmin credentials"** checkbox, in which case nothing is written server-side — the Garmin session lives only in an encrypted, httpOnly, session-scoped browser cookie, and the runner re-authenticates with Garmin on each new session. Silent re-login is unavailable in cookie-only mode by design (there is no stored password to recover from) — a dead session mid-use surfaces the interactive reconnect prompt instead.
+- **Change ID:** garmin-credential-control
+- **PRD refs:** FR-001 (garmin_credentials credential storage), Access Control section (extends the per-user credential-storage requirement — consider folding into the PRD addendum alongside S-05/S-06)
+- **Prerequisites:** S-01 (modifies the connect/credential + `getDashboardData` session-sourcing path established there)
+- **Parallel with:** S-04, S-05, S-06 — independent of the AI recommendation chain; own Stream C hygiene/privacy track off S-01
+- **Blockers:** —
+- **Decisions locked (brainstorming, 2026-07-23):**
+  - **Strict data hygiene:** disconnect deletes the whole `garmin_credentials` row (session + password + snapshot); cookie-only mode writes **zero rows** for that user (no snapshot cached, no persisted "mode" marker — ephemeral is implied by cookie-present / DB-row-absent).
+  - **Cookie-only tradeoff accepted:** no silent re-login in ephemeral mode; re-auth required each new browser session ("z każdą nową sesją").
+  - **Single combined slice** covering both disconnect and the ephemeral opt-out (shared connect/credential surface).
+- **Unknowns (resolve during `/10x-plan`):**
+  - **Cookie size:** the `PersistedSession` (OAuth1 + OAuth2 + cookies) may exceed the ~4KB per-cookie limit — confirm actual size and choose: single encrypted httpOnly cookie, chunked cookies, or trim to just the OAuth2 token.
+  - **Session sourcing:** `getDashboardData`/`fetchData` read `session_data` from the DB today; ephemeral mode must source *cookie in → refreshed session cookie out* (the sidecar rotates tokens on fetch via `res.session`). Leading approach: one code path parameterized by a "session provider" abstraction, not a scattered branch.
+  - **MFA in cookie mode:** the pending-MFA blob is stashed in `session_data` (DB) today; in ephemeral mode it must ride the cookie instead.
+  - **Cookie hardening:** httpOnly + Secure + SameSite; session-scoped lifetime (cleared on browser close) vs a short `maxAge`.
+- **Risk:** Security-sensitive. The main danger is regressing the default stored-mode fetch path while re-routing session sourcing through a provider abstraction — this touches the load-bearing `getDashboardData` path. Secondary risk: the session blob not fitting in a cookie, forcing chunking/trimming. Disconnect itself is low-risk (a scoped delete). Mitigate with a shared session-provider seam covered by tests for both modes, and an explicit cookie-size check early in the plan.
+- **Status:** ready
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                    | Suggested issue title                                                              | Ready for `/10x-plan` | Notes                                                          |
@@ -169,6 +191,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-04       | training-arc-context         | [GainPace] Training arc one-liner per AI recommendation                            | no                    | Proposed: S-03 must ship first                                 |
 | S-05       | workout-step-detail          | [GainPace] Structured per-option workout breakdown (summary + expandable steps, guarded paces) | yes           | Prereqs S-03 + S-04 done — run `/10x-plan workout-step-detail`  |
 | S-06       | recovery-conflict-warning    | [GainPace] Low-recovery caution under a hard option when pushing high intensity     | yes           | Prereq S-05 (implemented). Design locked — run `/10x-plan recovery-conflict-warning` |
+| S-07       | garmin-credential-control    | [GainPace] Disconnect Garmin + opt out of credential storage (cookie-only mode)     | yes           | Prereq S-01 (done). Design locked (2026-07-23) — run `/10x-plan garmin-credential-control` |
 
 ## Open Roadmap Questions
 

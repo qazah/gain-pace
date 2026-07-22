@@ -51,5 +51,5 @@ export default function GarminSection() {
     return <ConnectGarmin onConnected={reload} />;
   }
 
-  return <GarminDashboard data={data} onReconnect={reload} />;
+  return <GarminDashboard data={data} onReconnect={reload} onDisconnected={reload} />;
 }

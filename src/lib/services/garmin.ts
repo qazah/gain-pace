@@ -1,3 +1,4 @@
+import type { AstroCookies } from "astro";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { GARMIN_SIDECAR_URL, GARMIN_SIDECAR_SECRET } from "astro:env/server";
 import type { Database } from "@/types/database";
@@ -232,6 +233,33 @@ export async function submitMfa(
   }
   await persistSession(supabase, userId, res.session as PersistedSession);
   return { status: "ok" };
+}
+
+// ---- Disconnect ----
+
+// Phase 1 local cookie-clear, superseded by the shared cookie util in Phase 2.
+// Ephemeral session cookies don't exist yet, but disconnect must be correct once
+// they do: clear the count cookie plus a safe upper bound of chunk cookies
+// (2–3 expected; 8 is generous headroom).
+const SESSION_COOKIE_CLEAR_NAMES = ["gc_sess_n", ...Array.from({ length: 8 }, (_, i) => `gc_sess_${i}`)];
+
+function clearSessionCookies(cookies: AstroCookies): void {
+  for (const name of SESSION_COOKIE_CLEAR_NAMES) {
+    cookies.delete(name, { path: "/" });
+  }
+}
+
+/**
+ * Sever a runner's Garmin connection: delete the persisted credentials row and
+ * clear any ephemeral session cookies, so no Garmin state remains in either
+ * store. Leaves race_goals / workout_selections untouched.
+ */
+export async function disconnectGarmin(supabase: TypedSupabase, userId: string, cookies: AstroCookies): Promise<void> {
+  const { error } = await supabase.from("garmin_credentials").delete().eq("user_id", userId);
+  if (error) {
+    throw new GarminError(`failed to disconnect Garmin: ${error.message}`);
+  }
+  clearSessionCookies(cookies);
 }
 
 // ---- Live data fetch (with silent re-login + snapshot cache) ----
