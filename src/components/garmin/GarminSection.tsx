@@ -14,6 +14,10 @@ export default function GarminSection() {
   const { data, loading, error, refetch } = useGarminData();
 
   function reload() {
+    // Notify sibling islands (RecommendationSection) that the Garmin prerequisite
+    // is now satisfied, so a stale "connect Garmin first" gate can clear itself
+    // without a full page reload.
+    window.dispatchEvent(new Event("garmin-connected"));
     void refetch();
   }
 

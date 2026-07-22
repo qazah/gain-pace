@@ -127,5 +127,21 @@ export function useRecommendation() {
     void refetchToday();
   }, [refetchToday]);
 
+  useEffect(() => {
+    // Cross-island resync: GarminSection dispatches "garmin-connected" after a
+    // successful connect. If we're stuck on the "connect Garmin first" gate, that
+    // prerequisite is now satisfied — drop back to the modifier form without a
+    // full page reload. Other states/reasons are left untouched.
+    const onGarminConnected = () => {
+      setState((s) =>
+        s.status === "not_ready" && s.notReadyReason === "garmin" ? { ...s, status: "idle", notReadyReason: null } : s,
+      );
+    };
+    window.addEventListener("garmin-connected", onGarminConnected);
+    return () => {
+      window.removeEventListener("garmin-connected", onGarminConnected);
+    };
+  }, []);
+
   return { ...state, generate, select, reset, refetchToday };
 }
