@@ -1,10 +1,10 @@
 ---
 change_id: recovery-conflict-warning
 title: Warn when a hard workout is chosen against low recovery
-status: impl_reviewed
+status: archived
 created: 2026-07-21
 updated: 2026-07-22
-archived_at: null
+archived_at: 2026-07-22T09:28:59Z
 ---
 
 ## Notes

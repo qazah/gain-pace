@@ -3,7 +3,7 @@ project: "GainPace"
 version: 1
 status: draft
 created: 2026-06-04
-updated: 2026-07-21
+updated: 2026-07-22
 prd_version: 1
 main_goal: market-feedback
 top_blocker: external
@@ -37,7 +37,7 @@ The product's wedge — the one trait that, if removed, makes it indistinguishab
 | S-03 | modifier-to-recommendation-loop | set today's modifiers and receive 3 AI-generated workout alternatives with plain-language explanations, then select one       | S-01, S-02    | FR-004, FR-005, FR-007, US-01 | done     |
 | S-04 | training-arc-context         | see how each of the 3 alternatives affects their long-term training arc toward their race goal                                   | S-03          | FR-006, US-01                 | done     |
 | S-05 | workout-step-detail          | see a concrete prescription per option — a one-line summary (duration + effort + target pace) and, for structured sessions, an expandable step-by-step breakdown — with paces grounded in recent runs and guardrailed for plausibility | S-03, S-04    | FR-004, FR-005 (extends)      | ready    |
-| S-06 | recovery-conflict-warning    | see a caution note under a hard option when they ask for high intensity while their recovery (body battery) is low — informed by watch data, never blocking their choice | S-05          | FR-004, FR-005 (extends)      | new      |
+| S-06 | recovery-conflict-warning    | see a caution note under a hard option when they ask for high intensity while their recovery (body battery) is low — informed by watch data, never blocking their choice | S-05          | FR-004, FR-005 (extends)      | done     |
 
 ## Streams
 
@@ -156,7 +156,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns (resolve during `/10x-plan`):**
   - The `LOW_BODY_BATTERY` starting threshold (proposed 30) and the fallback sentence wording.
 - **Risk:** Low-to-moderate. Reuses the S-03 re-prompt/guardrail scaffolding and S-05 steps; the deterministic flag keeps behavior testable. Main risk is threshold tuning (too low → never warns; too high → warns on healthy days) and ensuring the warning never becomes a de-facto block. Recovery data already flows to the model (verified in `recommendations.ts`), so this is additive.
-- **Status:** new
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -190,3 +190,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-02: runner can define their long-term race goal — event name, event date, target distance, and target finish time — stored per account and retrievable as AI context.** — Archived 2026-07-14 → `context/archive/2026-07-14-race-goal-setup/`. Lesson: —.
 - **S-03: runner can set today's modifiers (Time available / Intensity preference / Feeling), receive a primary AI-recommended workout card plus 2 alternatives — each with a plain-language explanation grounded in their Garmin recovery metrics and active modifiers — and select one as today's committed workout; the whole flow completes within 3 user actions on the modifier screen.** — Archived 2026-07-14 → `context/archive/2026-07-14-modifier-to-recommendation-loop/`. Lesson: —.
 - **S-04: runner can see a one-line training-arc note alongside each of the 3 workout alternatives, explaining how today's choice affects their long-term progress toward their defined race goal.** — Archived 2026-07-21 → `context/archive/2026-07-20-training-arc-context/`. Lesson: —.
+- **S-06: when the runner asks for a hard session (intensity = high) while their recovery is low, each genuinely hard option carries a one-line amber caution acknowledging the tradeoff and nudging them to listen to their body. The runner's choice is never blocked — the watch informs, it does not gate.** — Archived 2026-07-22 → `context/archive/2026-07-21-recovery-conflict-warning/`. Lesson: —.
