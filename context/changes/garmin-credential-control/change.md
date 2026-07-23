@@ -1,7 +1,7 @@
 ---
 change_id: garmin-credential-control
 title: Garmin credential control and privacy — disconnect + cookie-only opt-out
-status: implementing
+status: implemented
 created: 2026-07-23
 updated: 2026-07-23
 archived_at: null
