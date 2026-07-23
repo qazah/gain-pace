@@ -3,6 +3,7 @@ import { z } from "astro/zod";
 import { createClient } from "@/lib/supabase";
 import { submitMfa, GarminNotConfiguredError, GarminError } from "@/lib/services/garmin";
 import { DbSessionStore } from "@/lib/services/garmin-session-store";
+import { CookieSessionStore, readSessionCookies } from "@/lib/services/garmin-session-cookie";
 
 /**
  * POST /api/garmin/mfa — resume a pending MFA challenge. The `pending` blob lives
@@ -35,7 +36,13 @@ export const POST: APIRoute = async (context) => {
   }
 
   try {
-    const result = await submitMfa(new DbSessionStore(supabase, context.locals.user.id), parsed.data.mfaCode);
+    // The connect step made the stores mutually exclusive; a pending blob in the
+    // cookies means this challenge belongs to a cookie-only (ephemeral) connect.
+    const cookieSession = await readSessionCookies(context.cookies, context.request.headers);
+    const store = cookieSession
+      ? new CookieSessionStore(context.cookies, context.request.headers)
+      : new DbSessionStore(supabase, context.locals.user.id);
+    const result = await submitMfa(store, parsed.data.mfaCode);
     const status = result.status === "ok" ? 200 : 400;
     return json(result, status);
   } catch (err) {

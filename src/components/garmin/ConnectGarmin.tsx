@@ -28,6 +28,7 @@ export default function ConnectGarmin({ onConnected, reconnect = false }: Props)
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mfaCode, setMfaCode] = useState("");
+  const [dontStore, setDontStore] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +40,7 @@ export default function ConnectGarmin({ onConnected, reconnect = false }: Props)
       const res = await fetch("/api/garmin/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, ephemeral: dontStore }),
       });
       const json = (await res.json()) as StatusResponse;
       switch (json.status) {
@@ -130,6 +131,22 @@ export default function ConnectGarmin({ onConnected, reconnect = false }: Props)
             placeholder="Your Garmin password"
             icon={<Lock className="size-4" />}
           />
+          {!reconnect ? (
+            <label className="flex items-start gap-2 text-sm text-blue-100/70">
+              <input
+                type="checkbox"
+                checked={dontStore}
+                onChange={(e) => {
+                  setDontStore(e.target.checked);
+                }}
+                className="mt-0.5 size-4 rounded border-white/20 bg-white/5 text-purple-600 focus:ring-purple-500"
+              />
+              <span>
+                Don&apos;t store my Garmin credentials. We&apos;ll keep your session only for this browser session and
+                won&apos;t save your login — you&apos;ll sign in again next time.
+              </span>
+            </label>
+          ) : null}
           <ServerError message={error} />
           <SpinnerButton
             pending={pending}
