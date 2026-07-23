@@ -10,7 +10,7 @@
 -- =============================================================
 
 ALTER TABLE garmin_credentials
-  ADD COLUMN session_data              JSONB,        -- PersistedSession (OAuth1 + OAuth2 + cookies)
+  ADD COLUMN session_data              JSONB,        -- PersistedSession (oauth2Token + cookies + diClientId; no OAuth1)
   ADD COLUMN garmin_password_encrypted TEXT,         -- AES-GCM blob (server-key encrypted), re-login fallback
   ADD COLUMN last_snapshot             JSONB,        -- last good fetched data, served stale on failure
   ADD COLUMN last_synced_at            TIMESTAMPTZ;  -- when last_snapshot was captured

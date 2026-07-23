@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { z } from "astro/zod";
 import { createClient } from "@/lib/supabase";
 import { getDashboardData } from "@/lib/services/garmin";
+import { DbSessionStore } from "@/lib/services/garmin-session-store";
 
 const dateParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -37,6 +38,6 @@ export const GET: APIRoute = async (context) => {
     date = parsed.data;
   }
 
-  const data = await getDashboardData(supabase, context.locals.user.id, date);
+  const data = await getDashboardData(new DbSessionStore(supabase, context.locals.user.id), date);
   return json(data);
 };

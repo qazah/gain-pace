@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { z } from "astro/zod";
 import { createClient } from "@/lib/supabase";
 import { submitMfa, GarminNotConfiguredError, GarminError } from "@/lib/services/garmin";
+import { DbSessionStore } from "@/lib/services/garmin-session-store";
 
 /**
  * POST /api/garmin/mfa — resume a pending MFA challenge. The `pending` blob lives
@@ -34,7 +35,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   try {
-    const result = await submitMfa(supabase, context.locals.user.id, parsed.data.mfaCode);
+    const result = await submitMfa(new DbSessionStore(supabase, context.locals.user.id), parsed.data.mfaCode);
     const status = result.status === "ok" ? 200 : 400;
     return json(result, status);
   } catch (err) {

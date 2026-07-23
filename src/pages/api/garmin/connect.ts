@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { z } from "astro/zod";
 import { createClient } from "@/lib/supabase";
 import { connectGarmin, GarminNotConfiguredError, GarminError } from "@/lib/services/garmin";
+import { DbSessionStore } from "@/lib/services/garmin-session-store";
 
 /**
  * POST /api/garmin/connect — start a Garmin connection.
@@ -36,7 +37,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   try {
-    const result = await connectGarmin(supabase, context.locals.user.id, parsed.data);
+    const result = await connectGarmin(new DbSessionStore(supabase, context.locals.user.id), parsed.data);
     return json(result, result.status === "invalid_credentials" ? 400 : 200);
   } catch (err) {
     if (err instanceof GarminNotConfiguredError) {

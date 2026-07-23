@@ -310,8 +310,8 @@ None — no schema change. Existing stored-mode users are unaffected (they keep 
 
 #### Automated
 
-- [x] 1.1 Linting passes: `npm run lint`
-- [x] 1.2 Production build passes: `npx astro sync && npm run build`
+- [x] 1.1 Linting passes: `npm run lint` — 02b371c
+- [x] 1.2 Production build passes: `npx astro sync && npm run build` — 02b371c
 
 #### Manual
 
@@ -324,8 +324,8 @@ None — no schema change. Existing stored-mode users are unaffected (they keep 
 
 #### Automated
 
-- [ ] 2.1 Linting passes: `npm run lint`
-- [ ] 2.2 Production build passes: `npx astro sync && npm run build`
+- [x] 2.1 Linting passes: `npm run lint`
+- [x] 2.2 Production build passes: `npx astro sync && npm run build`
 
 #### Manual
 
