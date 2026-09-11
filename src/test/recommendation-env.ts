@@ -148,6 +148,12 @@ export interface RecommendationEnv {
   client: AnthropicClient;
   /** Queue what the model returns (a Message) or throws (an Error), per attempt. */
   queue: (...items: (Anthropic.Message | Error)[]) => void;
+  /**
+   * Answer every attempt with the same thing. Use this whenever a test exercises
+   * the retry loop, so the test never has to know how many attempts the service
+   * makes — that count is an implementation detail no assertion should pin.
+   */
+  repeat: (item: Anthropic.Message | Error) => void;
   /** How many model calls were made. */
   calls: () => number;
   /** Rows written to recommendation_usage (the daily-cap bump). */
@@ -222,12 +228,13 @@ export function makeRecommendationEnv(options: EnvOptions = {}): RecommendationE
   } as unknown as TypedSupabase;
 
   const queued: (Anthropic.Message | Error)[] = [];
+  let repeated: Anthropic.Message | Error | null = null;
   let calls = 0;
   const client = {
     messages: {
       create: () => {
         calls++;
-        const next = queued.shift();
+        const next = queued.shift() ?? repeated;
         if (!next) return Promise.reject(new Error("no model response queued for this attempt"));
         return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
       },
@@ -239,6 +246,9 @@ export function makeRecommendationEnv(options: EnvOptions = {}): RecommendationE
     store,
     client,
     queue: (...items) => queued.push(...items),
+    repeat: (item) => {
+      repeated = item;
+    },
     calls: () => calls,
     usageUpserts,
     snapshots,

@@ -434,31 +434,31 @@ None. `RecommendationResult.degraded` is a response-only field — `src/componen
 
 #### Automated
 
-- [x] 1.1 Existing suite still passes
-- [x] 1.2 The new test file runs and passes
-- [x] 1.3 Lint and type-checked rules pass
-- [x] 1.4 Production build compiles
+- [x] 1.1 Existing suite still passes — 74ce24c
+- [x] 1.2 The new test file runs and passes — 74ce24c
+- [x] 1.3 Lint and type-checked rules pass — 74ce24c
+- [x] 1.4 Production build compiles — 74ce24c
 
 #### Manual
 
-- [x] 1.5 Default (no-deps) path unchanged in preview
+- [x] 1.5 Default (no-deps) path unchanged in preview — 74ce24c
 
 ### Phase 2: Degradation made visible
 
 #### Automated
 
-- [ ] 2.1 One alternative rejected → two ship with the marker set
-- [ ] 2.2 Two alternatives rejected → one ships with the marker set
-- [ ] 2.3 All three valid → marker is null
-- [ ] 2.4 All three rejected → LlmError, nothing shipped
-- [ ] 2.5 Implausible options absent, asserted against PRD l. 39's worked example
-- [ ] 2.6 Lint passes
-- [ ] 2.7 Build compiles
+- [x] 2.1 One alternative rejected → two ship with the marker set
+- [x] 2.2 Two alternatives rejected → one ships with the marker set
+- [x] 2.3 All three valid → marker is null
+- [x] 2.4 All three rejected → LlmError, nothing shipped
+- [x] 2.5 Implausible options absent, asserted against PRD l. 39's worked example
+- [x] 2.6 Lint passes
+- [x] 2.7 Build compiles
 
 #### Manual
 
-- [ ] 2.8 Degraded banner renders above the cards; single-option result reads sensibly
-- [ ] 2.9 Banner stacks correctly with the staleness notice
+- [x] 2.8 Degraded banner renders above the cards; single-option result reads sensibly
+- [x] 2.9 Banner stacks correctly with the staleness notice
 
 ### Phase 3: Failure taxonomy
 

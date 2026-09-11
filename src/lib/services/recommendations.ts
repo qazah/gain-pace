@@ -55,10 +55,12 @@ const DAILY_CAP = 10; // soft per-user daily generation cap
 const RANKS = ["primary", "alt_1", "alt_2"] as const;
 // Reliability (S-05 duration-sum / pace guardrails): one initial call plus up to
 // two bounded re-prompts for a fully-valid trio; the last attempt then salvages
-// whatever individually clears the guardrails, as long as at least MIN_ALTERNATIVES
-// survive — so a single implausible option never dead-ends the whole request.
+// whatever individually clears the guardrails. The floor is ONE — PRD l. 39
+// forbids shipping an implausible load, not withholding a plausible one, so a
+// single good workout is offered rather than discarded. Every reduced set is
+// flagged to the runner via `degraded`; a smaller set is fine, a silent one is not.
 const MAX_ATTEMPTS = 3;
-const MIN_ALTERNATIVES = 2;
+const MIN_ALTERNATIVES = 1;
 
 // S-06: static fallback caution, used when the low-recovery flag is set but the
 // model left recovery_warning empty on a hard option — the signal never drops.
@@ -348,7 +350,9 @@ export async function generateRecommendation(
     // Final attempt still imperfect → graceful degradation. Ship only the
     // alternatives that individually clear BOTH guardrails, re-ranked in order:
     // an implausible option is dropped (never shipped), and we give up (throw
-    // below) only when fewer than MIN_ALTERNATIVES survive.
+    // below) only when nothing at all survives. Note the re-ranking is positional
+    // — if the model's best-fit option is the one rejected, its second choice
+    // becomes `primary`. No source specifies the ranking semantics; accepted.
     const survivors = parsed.data.alternatives.filter(
       (alt) =>
         validateAlternatives([alt], dashboard.activities).ok &&
@@ -388,6 +392,7 @@ export async function generateRecommendation(
     alternatives,
     recoveryMissing: recoveryIsMissing(dashboard),
     stale: dashboard.stale,
+    degraded: degradedCount,
     context: { modifiers, race_goal_id: goal.id, garmin_data_snapshot: dashboard },
   };
 }
