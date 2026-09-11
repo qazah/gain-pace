@@ -10,6 +10,7 @@ import type {
   WorkoutModifiers,
 } from "@/types";
 import { getDashboardData } from "./garmin";
+import type { SessionStore } from "./garmin-session-store";
 import { getActiveRaceGoal } from "./race-goals";
 import {
   RECOMMENDATION_JSON_SCHEMA,
@@ -31,6 +32,21 @@ import {
  */
 
 type TypedSupabase = SupabaseClient<Database>;
+
+/**
+ * The slice of the Anthropic SDK this service actually uses. A real client
+ * satisfies it structurally, so production passes nothing; a test supplies a
+ * stub carrying only `messages.create`.
+ */
+export type AnthropicClient = Pick<Anthropic, "messages">;
+
+/**
+ * Injectable dependencies — the test seam. Every member is optional and falls
+ * back to the real production construction, so callers stay unchanged.
+ */
+export interface RecommendationDeps {
+  client?: AnthropicClient;
+}
 
 const MODEL = "claude-haiku-4-5";
 const TIMEOUT_MS = 20_000; // per-attempt cap; raised from 9s — a structured, multi-step generation occasionally needs longer
@@ -214,14 +230,17 @@ function extractText(message: Anthropic.Message): string {
 export async function generateRecommendation(
   supabase: TypedSupabase,
   userId: string,
+  store: SessionStore,
   modifiers: WorkoutModifiers,
+  deps: RecommendationDeps = {},
 ): Promise<RecommendationResult> {
   if (!ANTHROPIC_API_KEY) {
     throw new LlmNotConfiguredError();
   }
 
-  // 1. Prerequisites — gate, don't call the model with empty context.
-  const dashboard = await getDashboardData(supabase, userId);
+  // 1. Prerequisites — gate, don't call the model with empty context. The store
+  // is supplied by the route (DB- or cookie-backed), matching /api/garmin/data.
+  const dashboard = await getDashboardData(store);
   if (!dashboard.connected) {
     throw new RecommendationNotReadyError("garmin");
   }
@@ -236,7 +255,8 @@ export async function generateRecommendation(
     throw new RecommendationRateLimitedError();
   }
 
-  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: TIMEOUT_MS, maxRetries: 2 });
+  const client: AnthropicClient =
+    deps.client ?? new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: TIMEOUT_MS, maxRetries: 2 });
 
   // S-06: deterministic low-recovery conflict — the runner asked for high
   // intensity while their body battery is low. When set, ask the model to author
