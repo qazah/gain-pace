@@ -67,7 +67,9 @@ export const POST: APIRoute = async (context) => {
       return json({ status: "not_configured", message: "AI recommendations are not configured" }, 503);
     }
     if (err instanceof LlmError) {
-      return json({ status: "llm_error", message: err.message }, 502);
+      // `reason` is the stable code (timeout / transport / refusal / truncated /
+      // invalid_shape / implausible); `message` stays human-readable prose.
+      return json({ status: "llm_error", reason: err.reason, message: err.message }, 502);
     }
     throw err;
   }

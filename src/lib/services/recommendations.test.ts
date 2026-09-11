@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateRecommendation } from "./recommendations";
+import { APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import { LlmError } from "./recommendations";
 import { makeRecommendationEnv, modelMessage, modelPayload, VALID_ALTERNATIVES } from "@/test/recommendation-env";
 
@@ -179,5 +180,74 @@ describe("generateRecommendation — the implausible-load guardrail", () => {
     expect(result.alternatives.map((a) => a.workout_type)).not.toContain("Very long run");
     expect(result.alternatives[0].workout_type).toBe("Easy run");
     expect(result.degraded).toBe(2);
+  });
+});
+
+/**
+ * Each failure class must be diagnosable on its own, so the caller can tell a
+ * timeout from a refusal from shape drift. One parameterised case per class —
+ * six near-identical tests would catch the same regression six times.
+ */
+const FAILURE_CASES = [
+  {
+    label: "a connection timeout",
+    reason: "timeout",
+    respond: () => new APIConnectionTimeoutError({ message: "Request timed out." }),
+  },
+  {
+    label: "a transport error",
+    reason: "transport",
+    respond: () => new Error("socket hang up"),
+  },
+  {
+    label: "a response cut off mid-JSON",
+    reason: "truncated",
+    respond: () => modelMessage('{"alternatives": [{"workout_type": "Easy', { stop_reason: "max_tokens" }),
+  },
+  {
+    label: "a response that parses but has the wrong shape",
+    reason: "invalid_shape",
+    respond: () => modelMessage({ alternatives: [] }),
+  },
+  {
+    label: "a persistently implausible set",
+    reason: "implausible",
+    respond: () => modelMessage(modelPayload([IMPLAUSIBLE, IMPLAUSIBLE, IMPLAUSIBLE])),
+  },
+] as const;
+
+describe("generateRecommendation — failure taxonomy", () => {
+  it.each(FAILURE_CASES)("reports $label as $reason", async ({ reason, respond }) => {
+    const env = makeRecommendationEnv();
+    env.repeat(respond());
+
+    await expect(
+      generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client }),
+    ).rejects.toMatchObject({ name: "LlmError", reason });
+  });
+
+  it("reports a refusal without spending further attempts on it", async () => {
+    const env = makeRecommendationEnv();
+    env.repeat(modelMessage(modelPayload(), { stop_reason: "refusal" }));
+
+    await expect(
+      generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client }),
+    ).rejects.toMatchObject({ name: "LlmError", reason: "refusal" });
+
+    // A refusal is a decision, not a glitch — re-asking wastes the runner's time.
+    expect(env.calls()).toBe(1);
+  });
+
+  it("keeps an unknown field out of the result instead of failing the request", async () => {
+    const env = makeRecommendationEnv();
+    const withExtra = VALID_ALTERNATIVES.map((alt) => ({ ...alt, coach_confidence: 0.9 }));
+    env.repeat(modelMessage(modelPayload(withExtra)));
+
+    const result = await generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client });
+
+    // Deliberate leniency: a field the model starts sending must not 502 the
+    // runner. It is dropped, not rejected — changing this is a conscious call.
+    expect(result.alternatives).toHaveLength(3);
+    expect(result.alternatives[0]).not.toHaveProperty("coach_confidence");
   });
 });

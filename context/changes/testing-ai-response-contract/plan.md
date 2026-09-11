@@ -447,32 +447,32 @@ None. `RecommendationResult.degraded` is a response-only field — `src/componen
 
 #### Automated
 
-- [x] 2.1 One alternative rejected → two ship with the marker set
-- [x] 2.2 Two alternatives rejected → one ships with the marker set
-- [x] 2.3 All three valid → marker is null
-- [x] 2.4 All three rejected → LlmError, nothing shipped
-- [x] 2.5 Implausible options absent, asserted against PRD l. 39's worked example
-- [x] 2.6 Lint passes
-- [x] 2.7 Build compiles
+- [x] 2.1 One alternative rejected → two ship with the marker set — 19d1f2d
+- [x] 2.2 Two alternatives rejected → one ships with the marker set — 19d1f2d
+- [x] 2.3 All three valid → marker is null — 19d1f2d
+- [x] 2.4 All three rejected → LlmError, nothing shipped — 19d1f2d
+- [x] 2.5 Implausible options absent, asserted against PRD l. 39's worked example — 19d1f2d
+- [x] 2.6 Lint passes — 19d1f2d
+- [x] 2.7 Build compiles — 19d1f2d
 
 #### Manual
 
-- [x] 2.8 Degraded banner renders above the cards; single-option result reads sensibly
-- [x] 2.9 Banner stacks correctly with the staleness notice
+- [x] 2.8 Degraded banner renders above the cards; single-option result reads sensibly — 19d1f2d
+- [x] 2.9 Banner stacks correctly with the staleness notice — 19d1f2d
 
 ### Phase 3: Failure taxonomy
 
 #### Automated
 
-- [ ] 3.1 Timeout yields reason "timeout"
-- [ ] 3.2 Transport error yields reason "transport"
-- [ ] 3.3 Refusal yields reason "refusal" without consuming further attempts
-- [ ] 3.4 max_tokens response yields reason "truncated"
-- [ ] 3.5 Shape drift across every attempt yields reason "invalid_shape"
-- [ ] 3.6 Persistent guardrail violation yields reason "implausible"
-- [ ] 3.7 Unknown-field leniency pinned
-- [ ] 3.8 Lint passes
-- [ ] 3.9 Build compiles
+- [x] 3.1 Timeout yields reason "timeout"
+- [x] 3.2 Transport error yields reason "transport"
+- [x] 3.3 Refusal yields reason "refusal" without consuming further attempts
+- [x] 3.4 max_tokens response yields reason "truncated"
+- [x] 3.5 Shape drift across every attempt yields reason "invalid_shape"
+- [x] 3.6 Persistent guardrail violation yields reason "implausible"
+- [x] 3.7 Unknown-field leniency pinned
+- [x] 3.8 Lint passes
+- [x] 3.9 Build compiles
 
 #### Manual
 

@@ -80,9 +80,25 @@ export class LlmNotConfiguredError extends Error {
     this.name = "LlmNotConfiguredError";
   }
 }
+/**
+ * Why a generation failed. The route surfaces this verbatim so the caller can
+ * branch on a stable code instead of matching prose — and so a test asserts the
+ * class of failure rather than pinning a message string.
+ */
+export type LlmErrorReason =
+  | "timeout" // the request outlived its budget
+  | "transport" // network/provider failure before a usable response
+  | "refusal" // the model declined — a decision, not a glitch
+  | "truncated" // the response was cut off mid-output (max_tokens)
+  | "invalid_shape" // parsed, but not the contract we asked for
+  | "implausible"; // well-formed, but no option cleared the safety guardrails
+
 /** A model/network failure, refusal, or an unrecoverable guardrail violation. */
 export class LlmError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    public reason: LlmErrorReason,
+  ) {
     super(message);
     this.name = "LlmError";
   }
@@ -272,6 +288,8 @@ export async function generateRecommendation(
   let outputTokens = 0;
   let alternatives: WorkoutAlternative[] | null = null;
   let lastViolations = "";
+  // Which content failure ended the most recent attempt; reported if we exhaust them.
+  let lastReason: LlmErrorReason = "invalid_shape";
   let easyPaceSeconds: number | null = null;
   let degradedCount: number | null = null; // non-null (<3) when we shipped a salvaged partial set
 
@@ -294,16 +312,27 @@ export async function generateRecommendation(
       });
     } catch (err) {
       if (err instanceof APIConnectionTimeoutError) {
-        throw new LlmError("Timed out waiting for your recommendation. Please try again.");
+        throw new LlmError("Timed out waiting for your recommendation. Please try again.", "timeout");
       }
-      throw new LlmError(`Recommendation request failed: ${err instanceof Error ? err.message : String(err)}`);
+      throw new LlmError(
+        `Recommendation request failed: ${err instanceof Error ? err.message : String(err)}`,
+        "transport",
+      );
     }
 
     inputTokens += message.usage.input_tokens;
     outputTokens += message.usage.output_tokens;
 
     if (message.stop_reason === "refusal") {
-      throw new LlmError("model refused the request");
+      throw new LlmError("model refused the request", "refusal");
+    }
+
+    // Must precede the parse: a cut-off body is not valid JSON, so without this
+    // branch truncation is indistinguishable from the model emitting garbage.
+    if (message.stop_reason === "max_tokens") {
+      lastViolations = "the output was cut off before it was complete.";
+      lastReason = "truncated";
+      continue;
     }
 
     let raw: unknown;
@@ -311,12 +340,14 @@ export async function generateRecommendation(
       raw = JSON.parse(extractText(message));
     } catch {
       lastViolations = "the output was not valid JSON.";
+      lastReason = "invalid_shape";
       continue;
     }
 
     const parsed = parseRecommendation(raw);
     if (!parsed.ok) {
       lastViolations = `the output did not match the required shape (${parsed.issues}).`;
+      lastReason = "invalid_shape";
       continue;
     }
 
@@ -333,6 +364,7 @@ export async function generateRecommendation(
     }
 
     // Record why — feeds the next re-prompt's tail and the structured log.
+    lastReason = "implausible";
     lastViolations = [
       check.ok
         ? ""
@@ -382,7 +414,7 @@ export async function generateRecommendation(
   );
 
   if (!alternatives) {
-    throw new LlmError(`could not produce a plausible recommendation: ${lastViolations}`);
+    throw new LlmError(`could not produce a plausible recommendation: ${lastViolations}`, lastReason);
   }
 
   // 5. Count a successful generation against the daily cap.
