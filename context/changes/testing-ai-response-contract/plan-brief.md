@@ -25,7 +25,7 @@ A runner who gets fewer than three options **sees that they did**, in the same a
 | Failure classes | Typed `reason` code on `LlmError`, surfaced in the 502 | Lets tests assert a code instead of a message substring — the anti-pattern §2 names for risk #8 | Plan |
 | Unknown fields in the response | Keep stripping; pin it with a test | A `.strict()` schema would 502 the runner when the model adds a field, an outage triggered by a change we do not control | Plan |
 | Truncated response | Own failure class | A `max_tokens` cut-off is currently reported as invalid JSON, sending debugging the wrong way | Research |
-| Single surviving option | Ship it, flagged (floor 1, was 2) | PRD l. 39 forbids shipping an implausible load, not withholding a plausible one | Plan |
+| Single surviving option | Ship it, flagged (floor 1, was 2) | PRD l. 42 forbids shipping an implausible load, not withholding a plausible one | Plan |
 | Overall deadline | Wall-clock budget checked before each retry | Turns an effectively unbounded loop into a bound a test can assert behaviourally | Plan |
 | Presentation assertions | Out of scope | `jsdom` is not installed and §3 assigns the presentation layer to Phase 3 | Research |
 

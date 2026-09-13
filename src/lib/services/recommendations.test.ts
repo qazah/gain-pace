@@ -44,7 +44,7 @@ describe("generateRecommendation — the shipped set", () => {
       { client: env.client },
     );
 
-    // PRD l. 33/47/79: a primary recommendation plus two "if you prefer" options.
+    // PRD l. 34/47/79: a primary recommendation plus two "if you prefer" options.
     expect(result.alternatives).toHaveLength(3);
     expect(result.alternatives.map((a) => a.rank)).toEqual(["primary", "alt_1", "alt_2"]);
     expect(env.calls()).toBe(1);
@@ -73,7 +73,7 @@ describe("generateRecommendation — the shipped set", () => {
       { client: env.client },
     );
 
-    // PRD l. 51: every option carries at minimum a workout type, an estimated
+    // PRD l. 55: every option carries at minimum a workout type, an estimated
     // duration and a one-sentence explanation. S-05 adds the summary + steps.
     for (const alt of result.alternatives) {
       expect(alt.workout_type.length).toBeGreaterThan(0);
@@ -112,7 +112,7 @@ describe("generateRecommendation — the shipped set", () => {
 });
 
 /**
- * PRD l. 39's own worked example — "a 30 km sprint for a 5 km/week runner" —
+ * PRD l. 42's own worked example — "a 30 km sprint for a 5 km/week runner" —
  * sized for this fixture's runner: a ~180 min session against recent sessions of
  * ~40 min. Stated as an independent literal so it survives any retuning of the
  * guardrail's band multipliers.
@@ -134,7 +134,7 @@ describe("generateRecommendation — degradation contract", () => {
 
     const result = await generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client });
 
-    // PRD l. 39: an implausible load must never reach the runner. The rest of
+    // PRD l. 42: an implausible load must never reach the runner. The rest of
     // the session still ships — but the runner is told the set was reduced.
     expect(result.alternatives).toHaveLength(2);
     expect(result.degraded).toBe(2);
@@ -147,7 +147,7 @@ describe("generateRecommendation — degradation contract", () => {
 
     const result = await generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client });
 
-    // PRD l. 39 forbids shipping an implausible load; it does not ask us to
+    // PRD l. 42 forbids shipping an implausible load; it does not ask us to
     // withhold a plausible one. One good workout beats no workout at all.
     expect(result.alternatives).toHaveLength(1);
     expect(result.alternatives[0].rank).toBe("primary");
@@ -158,7 +158,7 @@ describe("generateRecommendation — degradation contract", () => {
     const env = makeRecommendationEnv();
     // Total duration is plausible (40 min against a ~40 min median), so the LOAD
     // guardrail passes it; only the structure check can catch that the steps sum
-    // to 10. S-05 / PRD l. 53: a prescription whose parts contradict its stated
+    // to 10. S-05 / PRD l. 57: a prescription whose parts contradict its stated
     // length is not a workout the runner can follow.
     const stepsDoNotSum = {
       ...VALID_ALTERNATIVES[0],
@@ -206,7 +206,7 @@ describe("generateRecommendation — the implausible-load guardrail", () => {
 
     const result = await generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client });
 
-    // PRD l. 39: a hallucinated load is a hard regression — position in the
+    // PRD l. 42: a hallucinated load is a hard regression — position in the
     // model's ranking buys it nothing. The next option becomes primary.
     expect(result.alternatives.map((a) => a.workout_type)).not.toContain("Very long run");
     expect(result.alternatives[0].workout_type).toBe("Easy run");
@@ -284,7 +284,7 @@ describe("generateRecommendation — failure taxonomy", () => {
 });
 
 /**
- * PRD l. 90 bounds the whole operation, not each attempt — research 2026-09-11
+ * PRD l. 101 bounds the whole operation, not each attempt — research 2026-09-11
  * measured a worst case around three minutes once the SDK's own retries and the
  * app loop compound. The bound is asserted behaviourally, by how many attempts
  * the service opened. Measuring elapsed time would test the clock, and naming

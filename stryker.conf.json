@@ -7,15 +7,18 @@
   "coverageAnalysis": "perTest",
   "ignoreStatic": true,
   "ignorePatterns": [
-    ".claude",
-    ".agents",
-    ".github",
-    ".astro",
-    ".wrangler",
-    "context",
-    "dist",
-    "public",
-    "sidecar",
-    "supabase"
+    "/.env*",
+    "/.dev.vars",
+    "/dist-preview",
+    "/.claude",
+    "/.agents",
+    "/.github",
+    "/.astro",
+    "/.wrangler",
+    "/context",
+    "/dist",
+    "/public",
+    "/sidecar",
+    "/supabase"
   ]
 }

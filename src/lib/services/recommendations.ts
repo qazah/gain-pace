@@ -52,7 +52,7 @@ export interface RecommendationDeps {
 
 const MODEL = "claude-haiku-4-5";
 const TIMEOUT_MS = 20_000; // per-attempt cap; raised from 9s — a structured, multi-step generation occasionally needs longer
-// Whole-request ceiling (PRD l. 90 bounds the operation, not the attempt). The
+// Whole-request ceiling (PRD l. 101 bounds the operation, not the attempt). The
 // per-attempt cap above compounds with the SDK's own retries and this loop's
 // re-prompts, which research 2026-09-11 measured at roughly three minutes worst
 // case. This bounds the compounding: a retry is opened only while there is
@@ -63,7 +63,7 @@ const DAILY_CAP = 10; // soft per-user daily generation cap
 const RANKS = ["primary", "alt_1", "alt_2"] as const;
 // Reliability (S-05 duration-sum / pace guardrails): one initial call plus up to
 // two bounded re-prompts for a fully-valid trio; the last attempt then salvages
-// whatever individually clears the guardrails. The floor is ONE — PRD l. 39
+// whatever individually clears the guardrails. The floor is ONE — PRD l. 42
 // forbids shipping an implausible load, not withholding a plausible one, so a
 // single good workout is offered rather than discarded. Every reduced set is
 // flagged to the runner via `degraded`; a smaller set is fine, a silent one is not.
@@ -171,7 +171,7 @@ async function bumpTodayCount(supabase: TypedSupabase, userId: string, current: 
 //   SHIPPING — what reaches the runner. That set may be smaller, because an
 //   alternative that fails a guardrail is dropped rather than shipped, and the
 //   result then carries `degraded` so the UI can say the set was reduced
-//   (PRD l. 79, l. 95).
+//   (PRD l. 88, l. 95).
 //
 // Relaxing the generation contract to match the shipping one would remove the
 // pressure that produces three good options in the first place.

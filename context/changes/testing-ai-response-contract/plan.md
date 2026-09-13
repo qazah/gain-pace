@@ -18,7 +18,7 @@ This plan does both halves: it fixes the three contracts against their PRD oracl
 
 1. **Degradation is invisible.** `degradedCount` is computed at `:339` and dies in a `console.log` at `:353`. `RecommendationResult` (`src/types.ts:69-84`) has no field for it. Meanwhile `MIN_ALTERNATIVES = 2` (`:45`) means a lone surviving valid workout is discarded and the request 502s.
 2. **Failure classes are indistinguishable.** Timeout, transport error, refusal, shape exhaustion and guardrail exhaustion all become `LlmError` → 502 with free text (`:274-277`, `:284`, `:361`; route at `src/pages/api/recommendations/index.ts:59-61`). A truncated response (`stop_reason === "max_tokens"`) is diagnosed as "the output was not valid JSON" because `stop_reason` is only checked for `"refusal"` (`:283`).
-3. **No overall deadline.** The SDK applies `TIMEOUT_MS = 20_000` per HTTP attempt with `maxRetries: 2` (`:239`); the app loop adds up to 3 attempts on top. Research computed ~61.5 s for a pure transport failure and ~184.5 s with app-level retries, against PRD l. 90's 10 s p95.
+3. **No overall deadline.** The SDK applies `TIMEOUT_MS = 20_000` per HTTP attempt with `maxRetries: 2` (`:239`); the app loop adds up to 3 attempts on top. Research computed ~61.5 s for a pure transport failure and ~184.5 s with app-level retries, against PRD l. 101's 10 s p95.
 
 **Test harness.** No configuration change is needed. `vitest.config.ts` is `environment: "node"`, `include: ["src/**/*.test.ts"]`, and `src/test/astro-env-stub.ts:15` supplies `ANTHROPIC_API_KEY`, so the service imports cleanly today. `jsdom` is not installed, which is why presentation assertions stay out of scope.
 
@@ -59,7 +59,7 @@ Establish the seam first as a behaviour-free refactor, then drive each contract 
 
 Tests assert against the **PRD oracle**, never against the implementation:
 
-- Implausible load uses PRD l. 39's own worked example — a ~180-minute option for a runner whose recent sessions are ~40 minutes — so the assertion survives any retuning of the band multipliers.
+- Implausible load uses PRD l. 42's own worked example — a ~180-minute option for a runner whose recent sessions are ~40 minutes — so the assertion survives any retuning of the band multipliers.
 - Degradation asserts "the survivors ship *and* the marker is present", which comes from the contract decision recorded in `research.md`, not from reading `:339`.
 - The deadline asserts "no further attempt was opened", not an elapsed-time measurement and not the budget constant.
 
@@ -138,7 +138,7 @@ Carry the reduction the service already computes all the way to the runner, and 
 
 **File**: `src/lib/services/recommendations.ts`
 
-**Intent**: Stop throwing away a plausible workout because it is alone — PRD l. 39 forbids shipping an implausible load, not withholding a plausible one — and surface the count that already exists.
+**Intent**: Stop throwing away a plausible workout because it is alone — PRD l. 42 forbids shipping an implausible load, not withholding a plausible one — and surface the count that already exists.
 
 **Contract**: `MIN_ALTERNATIVES` becomes `1`; `degradedCount` is returned on the result as `degraded` rather than only logged at `:353`. The `console.log` keeps its existing `degraded` key unchanged. The comment block at `:40-43` is updated so it no longer describes a two-alternative floor.
 
@@ -158,7 +158,7 @@ Carry the reduction the service already computes all the way to the runner, and 
 - Two alternatives rejected → one ships with the marker set (the former dead-end): `npm test`
 - All three valid → marker is `null`: `npm test`
 - All three rejected → `LlmError`, nothing shipped: `npm test`
-- Implausible options are absent from the shipped set, asserted against PRD l. 39's worked example: `npm test`
+- Implausible options are absent from the shipped set, asserted against PRD l. 42's worked example: `npm test`
 - Lint passes: `npm run lint`
 - Build compiles: `npm run build`
 
@@ -237,7 +237,7 @@ Make each failure class diagnosable by its own stable code rather than by prose,
 
 ### Overview
 
-Wrap the whole generation in a stated bound, so the request cannot run to the ~184.5 s worst case research computed against PRD l. 90's 10 s p95.
+Wrap the whole generation in a stated bound, so the request cannot run to the ~184.5 s worst case research computed against PRD l. 101's 10 s p95.
 
 ### Changes Required:
 
@@ -395,7 +395,7 @@ None. This phase starts no database and no sidecar — test-plan §3 assigns rea
 
 - Happy path: three in-band alternatives ship ranked
 - Degradation: one rejected → two ship flagged; two rejected → one ships flagged; three rejected → `LlmError`
-- Implausibility: PRD l. 39's worked example never appears in the shipped set
+- Implausibility: PRD l. 42's worked example never appears in the shipped set
 - Failure taxonomy: timeout, transport, refusal, truncated, invalid_shape, implausible each map to their own reason
 - Bound: past the budget, no further attempt is opened
 
@@ -451,7 +451,7 @@ None. `RecommendationResult.degraded` is a response-only field — `src/componen
 - [x] 2.2 Two alternatives rejected → one ships with the marker set — 19d1f2d
 - [x] 2.3 All three valid → marker is null — 19d1f2d
 - [x] 2.4 All three rejected → LlmError, nothing shipped — 19d1f2d
-- [x] 2.5 Implausible options absent, asserted against PRD l. 39's worked example — 19d1f2d
+- [x] 2.5 Implausible options absent, asserted against PRD l. 42's worked example — 19d1f2d
 - [x] 2.6 Lint passes — 19d1f2d
 - [x] 2.7 Build compiles — 19d1f2d
 

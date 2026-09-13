@@ -22,7 +22,7 @@ a verdict: killed, or ignored for a stated reason.
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `client.messages.create({})` (`:323`) and the `messages` / `output_config` literals (`:327-328`) | The stub never inspected the request, so dropping the JSON-schema `output_config` would have passed every test. Without it the model may answer in prose and every attempt fails the parse — **Risk #1**, which reached production on 2026-09-13. |
 | `attempt === 1` → `true` / `false` / `!==` (`:317`), re-prompt body → ` ` `` (`:319`)            | A retry that repeats the first prompt verbatim gives the model no reason to answer differently; the `false` form tells the model its previous answer was rejected before it has given one.                                                        |
-| `validateWorkoutStructure([alt], …)` → `validateWorkoutStructure([], …)` (`:408`)                | An empty array always validates, so the structure guardrail silently stops filtering **on the salvage path** — an implausibly paced workout could ship. PRD l. 39 / l. 53.                                                                        |
+| `validateWorkoutStructure([alt], …)` → `validateWorkoutStructure([], …)` (`:408`)                | An empty array always validates, so the structure guardrail silently stops filtering **on the salvage path** — an implausibly paced workout could ship. PRD l. 42 / l. 53.                                                                        |
 | `context: { … }` → `{}` (`:445`)                                                                 | The context is persisted with the chosen workout; emptying it strands the saved session from its goal and modifiers.                                                                                                                              |
 
 ## Ignored — with reasons
@@ -47,6 +47,34 @@ never sees it, because salvage runs only _after_ a successful parse. That
 collides with Phase 2's decision that `MIN_ALTERNATIVES` is 1. Observed live on
 2026-09-13. Not fixed here; no source settles whether the schema should accept
 1–3 and let the guardrails decide.
+
+## The `ignoreStatic` blind spot (checked 2026-09-13, impl-review F6)
+
+`stryker.conf.json` sets `ignoreStatic: true`, which drops mutants in
+module-level initializers — so the safety constants themselves
+(`TOTAL_BUDGET_MS`, `TIMEOUT_MS`, `MAX_ATTEMPTS`, `MIN_ALTERNATIVES`,
+`DAILY_CAP`, `SYSTEM_PROMPT`, `MIN_FACTOR` / `MAX_FACTOR` /
+`EFFORT_PACE_MULTIPLIERS` / `ABS_*`) never appear in the report at all. The
+concern is legitimate: constants exempt from the gate meant to probe them.
+
+Measured, rather than assumed. One pass over `recommendation-guardrail.ts` with
+`ignoreStatic: false`:
+
+|               | `ignoreStatic: true` | `ignoreStatic: false` |
+| ------------- | -------------------- | --------------------- |
+| Mutants       | 229                  | 255                   |
+| Killed        | 108                  | 119                   |
+| Survived      | 100                  | 115                   |
+| Score (total) | 47.16 %              | 46.67 %               |
+
+So the flag hides 26 mutants, of which **11 are actually killed** by the
+existing tests and 15 survive. The score overstatement is about half a point,
+not an order of magnitude — and the 15 survivors fall squarely in the category
+already ignored above: they are the ungrounded constants the plan forbids
+pinning. Verdict: **keep `ignoreStatic: true` for routine runs** (it removes
+noise that would all be ignored anyway), with this measurement on record so the
+choice is informed rather than accidental. Re-measure if the constants ever
+acquire a source.
 
 ## Reproducing
 
