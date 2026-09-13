@@ -509,12 +509,12 @@ None. `RecommendationResult.degraded` is a response-only field — `src/componen
 
 #### Automated
 
-- [x] 6.1 Whole suite passes
-- [x] 6.2 Lint passes
-- [x] 6.3 Build compiles
+- [x] 6.1 Whole suite passes — 5869b65
+- [x] 6.2 Lint passes — 5869b65
+- [x] 6.3 Build compiles — 5869b65
 
 #### Manual
 
-- [x] 6.4 PRD no longer contradicts the shipped degradation contract
-- [x] 6.5 §6.1 is specific enough to write Phase 2 from
-- [x] 6.6 §3 Phase 1 Status reads shipped
+- [x] 6.4 PRD no longer contradicts the shipped degradation contract — 5869b65
+- [x] 6.5 §6.1 is specific enough to write Phase 2 from — 5869b65
+- [x] 6.6 §3 Phase 1 Status reads shipped — 5869b65
