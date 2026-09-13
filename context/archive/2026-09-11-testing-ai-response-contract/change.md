@@ -1,10 +1,10 @@
 ---
 change_id: testing-ai-response-contract
 title: Test rollout Phase 1 — AI response contract
-status: impl_reviewed
+status: archived
 created: 2026-09-11
 updated: 2026-09-13
-archived_at: null
+archived_at: 2026-09-13T15:37:59Z
 ---
 
 ## Notes
