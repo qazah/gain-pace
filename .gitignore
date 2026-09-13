@@ -27,3 +27,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Stryker (selective mutation gate — run ad hoc, never in CI)
+.stryker-tmp/
+reports/

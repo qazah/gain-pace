@@ -1,12 +1,10 @@
 import { GARMIN_PASSWORD_ENC_KEY } from "astro:env/server";
 
 /**
- * Server-only AES-GCM encryption for the stored Garmin password.
- *
- * The Garmin password is a re-login fallback (see plan Phase 1 / Critical
- * Implementation Details). It is encrypted with a server key before being
- * persisted to `garmin_credentials.garmin_password_encrypted` and is only ever
- * decrypted server-side to hand the plaintext transiently to the sidecar.
+ * Server-only AES-GCM string encryption, reused for two Garmin secrets:
+ * - the stored password (`garmin_credentials.garmin_password_encrypted`), a
+ *   re-login fallback decrypted server-side to hand transiently to the sidecar;
+ * - the ephemeral session cookie blob (see `garmin-session-cookie.ts`).
  *
  * Stored form: `base64(iv) + "." + base64(ciphertext)`.
  *
@@ -43,19 +41,30 @@ function fromBase64(value: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-export async function encryptPassword(plaintext: string): Promise<string> {
+/** Encrypt an arbitrary UTF-8 string to `base64(iv).base64(ciphertext)`. */
+export async function encryptString(plaintext: string): Promise<string> {
   const key = await deriveKey();
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext));
   return toBase64(iv) + SEPARATOR + toBase64(new Uint8Array(ciphertext));
 }
 
-export async function decryptPassword(blob: string): Promise<string> {
+/** Inverse of {@link encryptString}. Throws on a malformed or undecryptable blob. */
+export async function decryptString(blob: string): Promise<string> {
   const [ivPart, ctPart] = blob.split(SEPARATOR);
   if (!ivPart || !ctPart) {
-    throw new Error("Malformed encrypted password blob");
+    throw new Error("Malformed encrypted blob");
   }
   const key = await deriveKey();
   const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(ivPart) }, key, fromBase64(ctPart));
   return new TextDecoder().decode(plaintext);
+}
+
+// Thin domain-named delegates so existing password callers are untouched.
+export async function encryptPassword(plaintext: string): Promise<string> {
+  return encryptString(plaintext);
+}
+
+export async function decryptPassword(blob: string): Promise<string> {
+  return decryptString(blob);
 }

@@ -10,6 +10,7 @@ import type {
   WorkoutModifiers,
 } from "@/types";
 import { getDashboardData } from "./garmin";
+import type { SessionStore } from "./garmin-session-store";
 import { getActiveRaceGoal } from "./race-goals";
 import {
   RECOMMENDATION_JSON_SCHEMA,
@@ -32,17 +33,42 @@ import {
 
 type TypedSupabase = SupabaseClient<Database>;
 
+/**
+ * The slice of the Anthropic SDK this service actually uses. A real client
+ * satisfies it structurally, so production passes nothing; a test supplies a
+ * stub carrying only `messages.create`.
+ */
+export type AnthropicClient = Pick<Anthropic, "messages">;
+
+/**
+ * Injectable dependencies — the test seam. Every member is optional and falls
+ * back to the real production construction, so callers stay unchanged.
+ */
+export interface RecommendationDeps {
+  client?: AnthropicClient;
+  /** Clock seam, so a test can advance time without waiting. Defaults to `Date.now`. */
+  now?: () => number;
+}
+
 const MODEL = "claude-haiku-4-5";
 const TIMEOUT_MS = 20_000; // per-attempt cap; raised from 9s — a structured, multi-step generation occasionally needs longer
+// Whole-request ceiling (PRD l. 101 bounds the operation, not the attempt). The
+// per-attempt cap above compounds with the SDK's own retries and this loop's
+// re-prompts, which research 2026-09-11 measured at roughly three minutes worst
+// case. This bounds the compounding: a retry is opened only while there is
+// realistic room for it to finish inside a wait a runner will tolerate.
+const TOTAL_BUDGET_MS = 45_000;
 const MAX_TOKENS = 2048; // the structured output is small
 const DAILY_CAP = 10; // soft per-user daily generation cap
 const RANKS = ["primary", "alt_1", "alt_2"] as const;
 // Reliability (S-05 duration-sum / pace guardrails): one initial call plus up to
 // two bounded re-prompts for a fully-valid trio; the last attempt then salvages
-// whatever individually clears the guardrails, as long as at least MIN_ALTERNATIVES
-// survive — so a single implausible option never dead-ends the whole request.
+// whatever individually clears the guardrails. The floor is ONE — PRD l. 42
+// forbids shipping an implausible load, not withholding a plausible one, so a
+// single good workout is offered rather than discarded. Every reduced set is
+// flagged to the runner via `degraded`; a smaller set is fine, a silent one is not.
 const MAX_ATTEMPTS = 3;
-const MIN_ALTERNATIVES = 2;
+const MIN_ALTERNATIVES = 1;
 
 // S-06: static fallback caution, used when the low-recovery flag is set but the
 // model left recovery_warning empty on a hard option — the signal never drops.
@@ -62,9 +88,25 @@ export class LlmNotConfiguredError extends Error {
     this.name = "LlmNotConfiguredError";
   }
 }
+/**
+ * Why a generation failed. The route surfaces this verbatim so the caller can
+ * branch on a stable code instead of matching prose — and so a test asserts the
+ * class of failure rather than pinning a message string.
+ */
+export type LlmErrorReason =
+  | "timeout" // the request outlived its budget
+  | "transport" // network/provider failure before a usable response
+  | "refusal" // the model declined — a decision, not a glitch
+  | "truncated" // the response was cut off mid-output (max_tokens)
+  | "invalid_shape" // parsed, but not the contract we asked for
+  | "implausible"; // well-formed, but no option cleared the safety guardrails
+
 /** A model/network failure, refusal, or an unrecoverable guardrail violation. */
 export class LlmError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    public reason: LlmErrorReason,
+  ) {
     super(message);
     this.name = "LlmError";
   }
@@ -119,6 +161,20 @@ async function bumpTodayCount(supabase: TypedSupabase, userId: string, current: 
 
 // ---- Prompt ----
 
+// Two different contracts, deliberately not the same one:
+//
+//   GENERATION — what we ask the model for. This prompt's "exactly 3" and the
+//   Zod `.length(3)` on the response are both part of it. We keep asking for
+//   three: a model given room to return fewer will take it, and the salvage
+//   path below is a safety net, not a target.
+//
+//   SHIPPING — what reaches the runner. That set may be smaller, because an
+//   alternative that fails a guardrail is dropped rather than shipped, and the
+//   result then carries `degraded` so the UI can say the set was reduced
+//   (PRD l. 88, l. 95).
+//
+// Relaxing the generation contract to match the shipping one would remove the
+// pressure that produces three good options in the first place.
 const SYSTEM_PROMPT = [
   "You are a running coach that adapts today's workout to the runner's real state.",
   "You will receive the runner's recent activities, last night's recovery metrics, their race goal, and today's modifiers (time available, intensity preference, how they feel).",
@@ -214,14 +270,17 @@ function extractText(message: Anthropic.Message): string {
 export async function generateRecommendation(
   supabase: TypedSupabase,
   userId: string,
+  store: SessionStore,
   modifiers: WorkoutModifiers,
+  deps: RecommendationDeps = {},
 ): Promise<RecommendationResult> {
   if (!ANTHROPIC_API_KEY) {
     throw new LlmNotConfiguredError();
   }
 
-  // 1. Prerequisites — gate, don't call the model with empty context.
-  const dashboard = await getDashboardData(supabase, userId);
+  // 1. Prerequisites — gate, don't call the model with empty context. The store
+  // is supplied by the route (DB- or cookie-backed), matching /api/garmin/data.
+  const dashboard = await getDashboardData(store);
   if (!dashboard.connected) {
     throw new RecommendationNotReadyError("garmin");
   }
@@ -236,7 +295,8 @@ export async function generateRecommendation(
     throw new RecommendationRateLimitedError();
   }
 
-  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: TIMEOUT_MS, maxRetries: 2 });
+  const client: AnthropicClient =
+    deps.client ?? new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: TIMEOUT_MS, maxRetries: 2 });
 
   // S-06: deterministic low-recovery conflict — the runner asked for high
   // intensity while their body battery is low. When set, ask the model to author
@@ -245,17 +305,28 @@ export async function generateRecommendation(
   const baseContext =
     buildUserContext(dashboard, goal, modifiers) + (recoveryConflict ? `\n\n${RECOVERY_CONFLICT_INSTRUCTION}` : "");
 
-  const started = Date.now();
+  const now = deps.now ?? Date.now;
+  const started = now();
   let inputTokens = 0;
   let outputTokens = 0;
   let alternatives: WorkoutAlternative[] | null = null;
   let lastViolations = "";
+  // Which content failure ended the most recent attempt; reported if we exhaust them.
+  let lastReason: LlmErrorReason = "invalid_shape";
   let easyPaceSeconds: number | null = null;
   let degradedCount: number | null = null; // non-null (<3) when we shipped a salvaged partial set
 
   // 3. Up to MAX_ATTEMPTS: one initial call + bounded guardrail re-prompts. The
   // final attempt salvages any individually-valid alternatives (graceful degradation).
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && !alternatives; attempt++) {
+    // Refuse to open another call once the budget is spent, rather than
+    // discovering it after a third 20-second attempt. The first attempt always
+    // runs — a budget that could reject before any call would turn a slow
+    // prerequisite into a silent no-op.
+    if (attempt > 1 && now() - started > TOTAL_BUDGET_MS) {
+      throw new LlmError("Timed out waiting for your recommendation. Please try again.", "timeout");
+    }
+
     const userContent =
       attempt === 1
         ? baseContext
@@ -272,16 +343,27 @@ export async function generateRecommendation(
       });
     } catch (err) {
       if (err instanceof APIConnectionTimeoutError) {
-        throw new LlmError("Timed out waiting for your recommendation. Please try again.");
+        throw new LlmError("Timed out waiting for your recommendation. Please try again.", "timeout");
       }
-      throw new LlmError(`Recommendation request failed: ${err instanceof Error ? err.message : String(err)}`);
+      throw new LlmError(
+        `Recommendation request failed: ${err instanceof Error ? err.message : String(err)}`,
+        "transport",
+      );
     }
 
     inputTokens += message.usage.input_tokens;
     outputTokens += message.usage.output_tokens;
 
     if (message.stop_reason === "refusal") {
-      throw new LlmError("model refused the request");
+      throw new LlmError("model refused the request", "refusal");
+    }
+
+    // Must precede the parse: a cut-off body is not valid JSON, so without this
+    // branch truncation is indistinguishable from the model emitting garbage.
+    if (message.stop_reason === "max_tokens") {
+      lastViolations = "the output was cut off before it was complete.";
+      lastReason = "truncated";
+      continue;
     }
 
     let raw: unknown;
@@ -289,12 +371,14 @@ export async function generateRecommendation(
       raw = JSON.parse(extractText(message));
     } catch {
       lastViolations = "the output was not valid JSON.";
+      lastReason = "invalid_shape";
       continue;
     }
 
     const parsed = parseRecommendation(raw);
     if (!parsed.ok) {
       lastViolations = `the output did not match the required shape (${parsed.issues}).`;
+      lastReason = "invalid_shape";
       continue;
     }
 
@@ -311,6 +395,7 @@ export async function generateRecommendation(
     }
 
     // Record why — feeds the next re-prompt's tail and the structured log.
+    lastReason = "implausible";
     lastViolations = [
       check.ok
         ? ""
@@ -328,7 +413,9 @@ export async function generateRecommendation(
     // Final attempt still imperfect → graceful degradation. Ship only the
     // alternatives that individually clear BOTH guardrails, re-ranked in order:
     // an implausible option is dropped (never shipped), and we give up (throw
-    // below) only when fewer than MIN_ALTERNATIVES survive.
+    // below) only when nothing at all survives. Note the re-ranking is positional
+    // — if the model's best-fit option is the one rejected, its second choice
+    // becomes `primary`. No source specifies the ranking semantics; accepted.
     const survivors = parsed.data.alternatives.filter(
       (alt) =>
         validateAlternatives([alt], dashboard.activities).ok &&
@@ -346,7 +433,7 @@ export async function generateRecommendation(
     JSON.stringify({
       evt: "recommendation",
       userId,
-      latencyMs: Date.now() - started,
+      latencyMs: now() - started,
       inputTokens,
       outputTokens,
       ok: alternatives != null,
@@ -358,7 +445,7 @@ export async function generateRecommendation(
   );
 
   if (!alternatives) {
-    throw new LlmError(`could not produce a plausible recommendation: ${lastViolations}`);
+    throw new LlmError(`could not produce a plausible recommendation: ${lastViolations}`, lastReason);
   }
 
   // 5. Count a successful generation against the daily cap.
@@ -368,6 +455,7 @@ export async function generateRecommendation(
     alternatives,
     recoveryMissing: recoveryIsMissing(dashboard),
     stale: dashboard.stale,
+    degraded: degradedCount,
     context: { modifiers, race_goal_id: goal.id, garmin_data_snapshot: dashboard },
   };
 }

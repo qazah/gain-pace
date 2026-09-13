@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "packageManager": "npm",
+  "reporters": ["html", "json", "clear-text", "progress"],
+  "mutate": ["src/lib/services/recommendations.ts", "src/lib/recommendation-guardrail.ts"],
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "ignorePatterns": [
+    "/.env*",
+    "/.dev.vars",
+    "/dist-preview",
+    "/.claude",
+    "/.agents",
+    "/.github",
+    "/.astro",
+    "/.wrangler",
+    "/context",
+    "/dist",
+    "/public",
+    "/sidecar",
+    "/supabase"
+  ]
+}

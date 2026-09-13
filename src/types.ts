@@ -73,6 +73,12 @@ export interface RecommendationResult {
   /** true → Garmin data was served from a stale cached snapshot. */
   stale: boolean;
   /**
+   * How many alternatives shipped when the guardrails rejected one or more of
+   * the model's three, and `null` on the clean path. The runner is always told
+   * when the set was reduced — a smaller set is acceptable, a silent one is not.
+   */
+  degraded: number | null;
+  /**
    * Context echoed back to the select endpoint so persistence doesn't re-fetch
    * Garmin: the modifiers used, the active goal id, and the Garmin snapshot.
    */

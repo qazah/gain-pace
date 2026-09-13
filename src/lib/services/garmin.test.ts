@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { connectGarmin, getDashboardData, submitMfa } from "./garmin";
+import { DbSessionStore } from "./garmin-session-store";
 import { decryptPassword, encryptPassword } from "./garmin-crypto";
 
 type CredRow = Database["public"]["Tables"]["garmin_credentials"]["Row"];
@@ -110,7 +111,10 @@ describe("connectGarmin", () => {
     const db = makeSupabase(null);
     fetchMock.mockResolvedValueOnce(reply({ status: "ok", session: SESSION }));
 
-    const result = await connectGarmin(db.client, "u1", { username: "runner@x.com", password: "pw" });
+    const result = await connectGarmin(new DbSessionStore(db.client, "u1"), {
+      username: "runner@x.com",
+      password: "pw",
+    });
 
     expect(result.status).toBe("ok");
     expect(db.upserts).toHaveLength(1);
@@ -126,7 +130,10 @@ describe("connectGarmin", () => {
     const pending = { mfaRequired: true, cookies: "c" };
     fetchMock.mockResolvedValueOnce(reply({ status: "mfa_required", pending }));
 
-    const result = await connectGarmin(db.client, "u1", { username: "runner@x.com", password: "pw" });
+    const result = await connectGarmin(new DbSessionStore(db.client, "u1"), {
+      username: "runner@x.com",
+      password: "pw",
+    });
 
     expect(result.status).toBe("mfa_required");
     expect(db.upserts[0]).toMatchObject({ session_data: pending });
@@ -137,7 +144,10 @@ describe("connectGarmin", () => {
     const db = makeSupabase(null);
     fetchMock.mockResolvedValueOnce(reply({ status: "invalid_credentials" }, 400));
 
-    const result = await connectGarmin(db.client, "u1", { username: "runner@x.com", password: "bad" });
+    const result = await connectGarmin(new DbSessionStore(db.client, "u1"), {
+      username: "runner@x.com",
+      password: "bad",
+    });
 
     expect(result.status).toBe("invalid_credentials");
     expect(db.upserts).toHaveLength(0);
@@ -149,7 +159,7 @@ describe("submitMfa", () => {
     const db = makeSupabase(makeRow({ session_data: { mfaRequired: true, cookies: "c" } }));
     fetchMock.mockResolvedValueOnce(reply({ status: "ok", session: SESSION }));
 
-    const result = await submitMfa(db.client, "u1", "123456");
+    const result = await submitMfa(new DbSessionStore(db.client, "u1"), "123456");
 
     expect(result.status).toBe("ok");
     expect(db.upserts[0]).toMatchObject({ session_data: SESSION });
@@ -159,7 +169,7 @@ describe("submitMfa", () => {
     const db = makeSupabase(makeRow({ session_data: { mfaRequired: true, cookies: "c" } }));
     fetchMock.mockResolvedValueOnce(reply({ status: "mfa_invalid" }, 400));
 
-    const result = await submitMfa(db.client, "u1", "000000");
+    const result = await submitMfa(new DbSessionStore(db.client, "u1"), "000000");
 
     expect(result.status).toBe("mfa_invalid");
     expect(db.upserts).toHaveLength(0);
@@ -167,7 +177,7 @@ describe("submitMfa", () => {
 
   it("returns no_pending when there is no in-flight challenge", async () => {
     const db = makeSupabase(null);
-    const result = await submitMfa(db.client, "u1", "123456");
+    const result = await submitMfa(new DbSessionStore(db.client, "u1"), "123456");
     expect(result.status).toBe("no_pending");
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -176,7 +186,7 @@ describe("submitMfa", () => {
 describe("getDashboardData", () => {
   it("returns connected:false when the user has never connected", async () => {
     const db = makeSupabase(null);
-    const data = await getDashboardData(db.client, "u1");
+    const data = await getDashboardData(new DbSessionStore(db.client, "u1"));
     expect(data).toMatchObject({ connected: false, activities: [], recovery: null, scheduledWorkout: null });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -188,7 +198,7 @@ describe("getDashboardData", () => {
       .mockResolvedValueOnce(reply({ status: "ok", activities: [ACTIVITY] }))
       .mockResolvedValueOnce(reply({ status: "ok", workout: null }));
 
-    const data = await getDashboardData(db.client, "u1", "2026-07-12");
+    const data = await getDashboardData(new DbSessionStore(db.client, "u1"), "2026-07-12");
 
     expect(data.connected).toBe(true);
     expect(data.stale).toBe(false);
@@ -211,7 +221,7 @@ describe("getDashboardData", () => {
       .mockResolvedValueOnce(reply({ status: "ok", activities: [] })) // activities
       .mockResolvedValueOnce(reply({ status: "ok", workout: null })); // scheduled
 
-    const data = await getDashboardData(db.client, "u1", "2026-07-12");
+    const data = await getDashboardData(new DbSessionStore(db.client, "u1"), "2026-07-12");
 
     expect(data.connected).toBe(true);
     expect(data.recovery).toEqual(RECOVERY);
@@ -234,7 +244,7 @@ describe("getDashboardData", () => {
     const db = makeSupabase(makeRow({ session_data: SESSION, last_snapshot: cached }));
     fetchMock.mockRejectedValueOnce(new Error("sidecar unreachable"));
 
-    const data = await getDashboardData(db.client, "u1", "2026-07-12");
+    const data = await getDashboardData(new DbSessionStore(db.client, "u1"), "2026-07-12");
 
     expect(data.stale).toBe(true);
     expect(data.recovery).toEqual(RECOVERY);
@@ -250,7 +260,7 @@ describe("getDashboardData", () => {
       .mockResolvedValueOnce(reply({ status: "not_authenticated" }, 401)) // recovery attempt 1
       .mockResolvedValueOnce(reply({ status: "mfa_required", pending: { mfaRequired: true, cookies: "c" } })); // re-login re-challenged
 
-    const data = await getDashboardData(db.client, "u1", "2026-07-12");
+    const data = await getDashboardData(new DbSessionStore(db.client, "u1"), "2026-07-12");
 
     expect(data.connected).toBe(true);
     expect(data.stale).toBe(true);

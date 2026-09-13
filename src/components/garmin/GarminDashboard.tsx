@@ -1,12 +1,26 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
-import { Activity, BatteryMedium, CalendarCheck, HeartPulse, Moon, RefreshCw, TriangleAlert } from "lucide-react";
+import {
+  Activity,
+  BatteryMedium,
+  CalendarCheck,
+  HeartPulse,
+  Loader2,
+  Moon,
+  RefreshCw,
+  TriangleAlert,
+  Unlink,
+} from "lucide-react";
 import type { GarminActivity, GarminDashboardData, GarminRecovery } from "@/types";
+import { Button } from "@/components/ui/button";
 import ConnectGarmin from "./ConnectGarmin";
 import ManualWorkoutEntry from "./ManualWorkoutEntry";
 
 interface Props {
   data: GarminDashboardData;
   onReconnect: () => void;
+  /** Called after the Garmin connection is severed; parent refetches → connect screen. */
+  onDisconnected: () => void;
 }
 
 function formatDuration(seconds: number | null): string {
@@ -112,7 +126,89 @@ function ActivitiesCard({ activities }: { activities: GarminActivity[] }) {
   );
 }
 
-export default function GarminDashboard({ data, onReconnect }: Props) {
+function DisconnectControl({ onDisconnected }: { onDisconnected: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function disconnect() {
+    setPending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/garmin/disconnect", { method: "POST" });
+      const json = (await res.json()) as { status: string; message?: string };
+      if (json.status === "ok") {
+        onDisconnected();
+        return;
+      }
+      setError(json.message ?? "Couldn't disconnect. Please try again.");
+    } catch {
+      setError("Couldn't reach the server. Please try again.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (!confirming) {
+    return (
+      <section className="border-t border-white/10 pt-4">
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming(true);
+          }}
+          className="flex items-center gap-1.5 text-xs text-blue-100/50 transition-colors hover:text-red-300"
+        >
+          <Unlink className="size-3.5" />
+          Disconnect Garmin
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="border-t border-white/10 pt-4">
+      <div className="space-y-3 rounded-xl border border-amber-400/30 bg-amber-900/20 p-4">
+        <div className="flex items-start gap-2 text-sm text-amber-200">
+          <TriangleAlert className="size-4 shrink-0" />
+          <p>
+            Disconnect Garmin? This removes your stored Garmin login and synced data from GainPace. You&apos;ll need to
+            reconnect to see your data again.
+          </p>
+        </div>
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        <div className="flex gap-2">
+          <Button
+            onClick={disconnect}
+            disabled={pending}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-500"
+          >
+            {pending ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                Disconnecting…
+              </span>
+            ) : (
+              "Disconnect"
+            )}
+          </Button>
+          <Button
+            onClick={() => {
+              setConfirming(false);
+              setError(null);
+            }}
+            disabled={pending}
+            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function GarminDashboard({ data, onReconnect, onDisconnected }: Props) {
   return (
     <div className="space-y-6">
       {data.reconnectRequired ? (
@@ -149,6 +245,7 @@ export default function GarminDashboard({ data, onReconnect }: Props) {
 
       <RecoveryCard recovery={data.recovery} />
       <ActivitiesCard activities={data.activities} />
+      <DisconnectControl onDisconnected={onDisconnected} />
     </div>
   );
 }

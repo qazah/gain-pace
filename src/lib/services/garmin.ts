@@ -1,7 +1,10 @@
+import type { AstroCookies } from "astro";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { GARMIN_SIDECAR_URL, GARMIN_SIDECAR_SECRET } from "astro:env/server";
 import type { Database } from "@/types/database";
 import type { GarminActivity, GarminDashboardData, GarminRecovery, GarminScheduledWorkout } from "@/types";
+import type { GarminSessionState, SessionStore } from "./garmin-session-store";
+import { clearSessionCookies } from "./garmin-session-cookie";
 import { decryptPassword, encryptPassword } from "./garmin-crypto";
 
 /**
@@ -10,34 +13,34 @@ import { decryptPassword, encryptPassword } from "./garmin-crypto";
  *
  * Responsibilities:
  * - own the typed client to the off-edge sidecar (HTTPS + shared bearer),
- * - persist / rehydrate the Garmin session + encrypted password in
- *   `garmin_credentials` (per-user Supabase client → RLS scoped to auth.uid()),
- * - re-login from the stored password when a session dies (enabled: Phase 2
- *   verified unattended re-login works for the non-MFA test account; an MFA
- *   re-challenge falls back to a "reconnect required" state),
- * - serve the cached `last_snapshot` with `stale: true` on any sidecar failure.
+ * - drive connect / MFA / data-fetch over a {@link SessionStore} seam, so the
+ *   session may live in the DB (default) or in cookies (ephemeral) without this
+ *   module knowing which,
+ * - re-login from the stored password when a session dies (DB mode only; cookie
+ *   mode has no stored password, so a dead session surfaces "reconnect required"),
+ * - serve the cached `last_snapshot` with `stale: true` on any sidecar failure
+ *   (DB mode only; cookie mode has no snapshot).
  *
  * The Worker never holds Garmin tokens directly or talks to Garmin — it only
  * calls our own sidecar contract (see sidecar/src/routes/*.ts).
  */
 
 type TypedSupabase = SupabaseClient<Database>;
-type CredRow = Database["public"]["Tables"]["garmin_credentials"]["Row"];
 
 /** Minimal shape of garmin-connect-client's PersistedSession we depend on. */
-interface Oauth2Token {
+export interface Oauth2Token {
   access_token: string;
   token_type: string;
   refresh_token?: string;
   expires_at?: number;
   expires_in?: number;
 }
-interface PersistedSession {
+export interface PersistedSession {
   oauth2Token: Oauth2Token;
   [key: string]: unknown;
 }
 /** The self-contained MFA resume blob the sidecar returns on step 1 of login. */
-interface MfaPending {
+export interface MfaPending {
   mfaRequired: true;
   cookies: string;
 }
@@ -110,7 +113,7 @@ function callData(path: string, session: PersistedSession): Promise<Record<strin
   return callSidecar(path, { method: "POST", body: JSON.stringify({ session }) });
 }
 
-// ---- Persistence helpers ----
+// ---- Helpers ----
 
 function isPending(session: unknown): session is MfaPending {
   if (typeof session !== "object" || session === null) return false;
@@ -118,64 +121,21 @@ function isPending(session: unknown): session is MfaPending {
   return s.mfaRequired === true && typeof s.cookies === "string";
 }
 
-/** Best-effort expiry as ISO for the scalar `expires_at` column (used only for quick checks). */
-function expiresAtIso(token: Oauth2Token): string {
-  if (typeof token.expires_at === "number") {
-    const ms = token.expires_at > 1e12 ? token.expires_at : token.expires_at * 1000;
-    return new Date(ms).toISOString();
-  }
-  return new Date(Date.now() + (token.expires_in ?? 3600) * 1000).toISOString();
-}
-
-async function loadRow(supabase: TypedSupabase, userId: string): Promise<CredRow | null> {
-  const { data } = await supabase.from("garmin_credentials").select("*").eq("user_id", userId).maybeSingle();
-  return data;
-}
-
-/** Upsert the live session + scalar tokens; optionally the login username / encrypted password. */
-async function persistSession(
-  supabase: TypedSupabase,
-  userId: string,
-  session: PersistedSession,
-  extra?: { username?: string; encryptedPassword?: string },
-): Promise<void> {
-  const token = session.oauth2Token;
-  const { error } = await supabase.from("garmin_credentials").upsert(
-    {
-      user_id: userId,
-      access_token: token.access_token,
-      refresh_token: token.refresh_token ?? null,
-      expires_at: expiresAtIso(token),
-      session_data: session as unknown as Database["public"]["Tables"]["garmin_credentials"]["Row"]["session_data"],
-      last_synced_at: new Date().toISOString(),
-      ...(extra?.username ? { garmin_user_id: extra.username } : {}),
-      ...(extra?.encryptedPassword ? { garmin_password_encrypted: extra.encryptedPassword } : {}),
-    },
-    { onConflict: "user_id" },
-  );
-  // Surface a persist failure instead of letting connect falsely report "ok"
-  // (a missing table GRANT once made this fail silently — see migration
-  // 20260713000001_grant_domain_tables_to_authenticated.sql).
-  if (error) {
-    throw new GarminError(`failed to persist Garmin session: ${error.message}`);
-  }
-}
-
 // ---- Connect / MFA ----
 
 /**
- * Start a Garmin connection. Encrypts + stores the password (a re-login fallback)
- * regardless of the MFA outcome. On `mfa_required`, the self-contained `pending`
- * blob is stashed in `session_data` so {@link submitMfa} can resume it later — the
- * connect flow is resumable, not fire-and-forget.
+ * Start a Garmin connection. In DB mode the password is encrypted + stored (a
+ * re-login fallback) regardless of the MFA outcome; in cookie mode it is never
+ * stored (`store.persistsPassword === false`). On `mfa_required`, the
+ * self-contained `pending` blob is stashed via the store so {@link submitMfa}
+ * can resume it later — the connect flow is resumable, not fire-and-forget.
  */
 export async function connectGarmin(
-  supabase: TypedSupabase,
-  userId: string,
+  store: SessionStore,
   creds: { username: string; password: string },
 ): Promise<{ status: "ok" | "mfa_required" | "invalid_credentials" }> {
   const res = await callSidecar("/garmin/login", { method: "POST", body: JSON.stringify(creds) });
-  const encryptedPassword = await encryptPassword(creds.password);
+  const encryptedPassword = store.persistsPassword ? await encryptPassword(creds.password) : undefined;
 
   if (res.status === "invalid_credentials") {
     return { status: "invalid_credentials" };
@@ -185,24 +145,13 @@ export async function connectGarmin(
     if (!isPending(pending)) {
       throw new GarminError("sidecar returned mfa_required without a valid pending blob");
     }
-    await supabase.from("garmin_credentials").upsert(
-      {
-        user_id: userId,
-        access_token: "", // placeholder: no token until MFA resume completes
-        expires_at: new Date(0).toISOString(),
-        garmin_user_id: creds.username,
-        garmin_password_encrypted: encryptedPassword,
-        session_data: pending as unknown as CredRow["session_data"],
-        last_synced_at: null,
-      },
-      { onConflict: "user_id" },
-    );
+    await store.persistPending(pending, creds.username, encryptedPassword);
     return { status: "mfa_required" };
   }
   if (res.status !== "ok" || !res.session) {
     throw new GarminError(`login failed: ${String(res.message ?? res.status)}`);
   }
-  await persistSession(supabase, userId, res.session as PersistedSession, {
+  await store.persistSession(res.session as PersistedSession, {
     username: creds.username,
     encryptedPassword,
   });
@@ -211,12 +160,11 @@ export async function connectGarmin(
 
 /** Resume a pending MFA challenge with the code the runner entered. */
 export async function submitMfa(
-  supabase: TypedSupabase,
-  userId: string,
+  store: SessionStore,
   mfaCode: string,
 ): Promise<{ status: "ok" | "mfa_invalid" | "no_pending" }> {
-  const row = await loadRow(supabase, userId);
-  const pending = row?.session_data;
+  const state = await store.load();
+  const pending = state?.session;
   if (!isPending(pending)) {
     return { status: "no_pending" };
   }
@@ -230,20 +178,36 @@ export async function submitMfa(
   if (res.status !== "ok" || !res.session) {
     throw new GarminError(`mfa resume failed: ${String(res.message ?? res.status)}`);
   }
-  await persistSession(supabase, userId, res.session as PersistedSession);
+  await store.persistSession(res.session as PersistedSession);
   return { status: "ok" };
+}
+
+// ---- Disconnect ----
+
+/**
+ * Sever a runner's Garmin connection: delete the persisted credentials row and
+ * clear any ephemeral session cookies, so no Garmin state remains in either
+ * store. Leaves race_goals / workout_selections untouched.
+ */
+export async function disconnectGarmin(supabase: TypedSupabase, userId: string, cookies: AstroCookies): Promise<void> {
+  const { error } = await supabase.from("garmin_credentials").delete().eq("user_id", userId);
+  if (error) {
+    throw new GarminError(`failed to disconnect Garmin: ${error.message}`);
+  }
+  clearSessionCookies(cookies);
 }
 
 // ---- Live data fetch (with silent re-login + snapshot cache) ----
 
 /**
  * Silent re-login from the stored encrypted password. Throws {@link ReconnectRequiredError}
- * when it can't recover unattended (no stored password/username, or Garmin
- * re-challenges MFA) so the caller can surface an interactive reconnect state.
+ * when it can't recover unattended (no stored password/username — always the case
+ * in cookie mode — or Garmin re-challenges MFA) so the caller can surface an
+ * interactive reconnect state.
  */
-async function reLogin(supabase: TypedSupabase, userId: string, row: CredRow): Promise<PersistedSession> {
-  const encrypted = row.garmin_password_encrypted;
-  const username = row.garmin_user_id;
+async function reLogin(store: SessionStore, state: GarminSessionState): Promise<PersistedSession> {
+  const encrypted = state.encryptedPassword;
+  const username = state.username;
   if (!encrypted || !username) {
     throw new ReconnectRequiredError();
   }
@@ -254,7 +218,7 @@ async function reLogin(supabase: TypedSupabase, userId: string, row: CredRow): P
     throw new ReconnectRequiredError();
   }
   const session = res.session as PersistedSession;
-  await persistSession(supabase, userId, session);
+  await store.persistSession(session);
   return session;
 }
 
@@ -264,25 +228,24 @@ async function reLogin(supabase: TypedSupabase, userId: string, row: CredRow): P
  * returns. Returns the raw contract JSON (caller plucks its field).
  */
 async function fetchData(
-  supabase: TypedSupabase,
-  userId: string,
-  row: CredRow,
+  store: SessionStore,
+  state: GarminSessionState,
   pathWithQuery: string,
 ): Promise<Record<string, unknown>> {
-  const session = row.session_data;
+  const session = state.session;
   if (!session || isPending(session)) {
     throw new ReconnectRequiredError();
   }
-  let res = await callData(pathWithQuery, session as unknown as PersistedSession);
+  let res = await callData(pathWithQuery, session);
   if (res.status === "not_authenticated") {
-    const fresh = await reLogin(supabase, userId, row);
+    const fresh = await reLogin(store, state);
     res = await callData(pathWithQuery, fresh);
   }
   if (res.status !== "ok") {
     throw new GarminError(`data fetch failed: ${String(res.message ?? res.status)}`);
   }
   if (res.session) {
-    await persistSession(supabase, userId, res.session as PersistedSession);
+    await store.persistSession(res.session as PersistedSession);
   }
   return res;
 }
@@ -295,30 +258,26 @@ function todayIso(): string {
  * The dashboard's one-shot fetch: recovery + last activities + today's scheduled
  * workout. Fetches recovery first (so an at-most-once re-login yields a fresh
  * session the other two reuse), then activities + scheduled-workout in parallel.
- * On any failure, serves the cached `last_snapshot` with `stale: true`; if there
- * is no cache and the session is unrecoverable, flags `reconnectRequired`.
+ * On any failure, serves the cached `last_snapshot` with `stale: true` (DB mode);
+ * if there is no cache and the session is unrecoverable, flags `reconnectRequired`.
  */
-export async function getDashboardData(
-  supabase: TypedSupabase,
-  userId: string,
-  date?: string,
-): Promise<GarminDashboardData> {
-  const row = await loadRow(supabase, userId);
-  if (!row || !row.session_data || isPending(row.session_data)) {
+export async function getDashboardData(store: SessionStore, date?: string): Promise<GarminDashboardData> {
+  const state = await store.load();
+  if (!state?.session || isPending(state.session)) {
     return { connected: false, recovery: null, activities: [], scheduledWorkout: null, stale: false };
   }
 
   const d = date ?? todayIso();
   try {
-    const recRes = await fetchData(supabase, userId, row, `/garmin/recovery?date=${encodeURIComponent(d)}`);
+    const recRes = await fetchData(store, state, `/garmin/recovery?date=${encodeURIComponent(d)}`);
     // Recovery may have re-logged-in (or the sidecar may have rotated tokens),
-    // persisting a fresh session. Reload the row so activities + scheduled reuse
+    // persisting a fresh session. Reload state so activities + scheduled reuse
     // the live session — otherwise both would retry against the now-dead session
     // and each trigger its own re-login (up to 3 Garmin logins for one load).
-    const rowForRest: CredRow = (await loadRow(supabase, userId)) ?? row;
+    const stateForRest: GarminSessionState = (await store.load()) ?? state;
     const [actRes, schRes] = await Promise.all([
-      fetchData(supabase, userId, rowForRest, `/garmin/activities?limit=4`),
-      fetchData(supabase, userId, rowForRest, `/garmin/scheduled-workout?date=${encodeURIComponent(d)}`),
+      fetchData(store, stateForRest, `/garmin/activities?limit=4`),
+      fetchData(store, stateForRest, `/garmin/scheduled-workout?date=${encodeURIComponent(d)}`),
     ]);
 
     const data: GarminDashboardData = {
@@ -328,20 +287,15 @@ export async function getDashboardData(
       scheduledWorkout: (schRes.workout as GarminScheduledWorkout | null | undefined) ?? null,
       stale: false,
     };
-    await supabase
-      .from("garmin_credentials")
-      .update({
-        last_snapshot: data as unknown as CredRow["last_snapshot"],
-        last_synced_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId);
+    await store.saveSnapshot(data);
     return data;
   } catch (err) {
     // A dead session that can't be silently recovered still surfaces the
     // reconnect CTA even when we can serve a cached snapshot (stale data +
-    // reconnect prompt coexist — the UI shows both).
+    // reconnect prompt coexist — the UI shows both). In cookie mode `snapshot`
+    // is always null, so a failure yields the no-cache branch (strict hygiene).
     const reconnectRequired = err instanceof ReconnectRequiredError;
-    const cached = row.last_snapshot as GarminDashboardData | null;
+    const cached = state.snapshot;
     if (cached) {
       return { ...cached, connected: true, stale: true, ...(reconnectRequired ? { reconnectRequired: true } : {}) };
     }

@@ -2,6 +2,8 @@ import type { APIRoute } from "astro";
 import { z } from "astro/zod";
 import { createClient } from "@/lib/supabase";
 import { getDashboardData } from "@/lib/services/garmin";
+import { DbSessionStore } from "@/lib/services/garmin-session-store";
+import { CookieSessionStore, readSessionCookies } from "@/lib/services/garmin-session-cookie";
 
 const dateParam = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -37,6 +39,13 @@ export const GET: APIRoute = async (context) => {
     date = parsed.data;
   }
 
-  const data = await getDashboardData(supabase, context.locals.user.id, date);
+  // Stores are mutually exclusive (see /connect): a session in the cookies means
+  // ephemeral mode; otherwise fall back to the DB-backed store.
+  const cookieSession = await readSessionCookies(context.cookies, context.request.headers);
+  const store = cookieSession
+    ? new CookieSessionStore(context.cookies, context.request.headers)
+    : new DbSessionStore(supabase, context.locals.user.id);
+
+  const data = await getDashboardData(store, date);
   return json(data);
 };

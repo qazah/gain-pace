@@ -82,16 +82,29 @@ export default function RecommendationResults({ result, committedRank, onSelect,
   const primary = result.alternatives.find((a) => a.rank === "primary");
   const alternatives = result.alternatives.filter((a) => a.rank !== "primary");
 
+  // Result-level caveats, stacked: these can co-occur (a reduced set served from
+  // a stale snapshot), so each gets its own line rather than competing for one.
+  const notices = [
+    result.degraded != null
+      ? `Showing ${result.degraded} of 3 options — the others didn't fit your recent training, so we left them out.`
+      : null,
+    result.recoveryMissing
+      ? "No recovery data synced today — these options weigh your goal and recent activity, with lower confidence on today's readiness."
+      : null,
+    result.stale ? "Garmin data may be out of date — recommendations use your last synced snapshot." : null,
+  ].filter((notice): notice is string => notice !== null);
+
   return (
     <div className="space-y-4">
-      {result.stale || result.recoveryMissing ? (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-900/20 px-3 py-2 text-xs text-amber-200">
+      {notices.map((notice) => (
+        <div
+          key={notice}
+          className="flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-900/20 px-3 py-2 text-xs text-amber-200"
+        >
           <TriangleAlert className="size-4 shrink-0" />
-          {result.recoveryMissing
-            ? "No recovery data synced today — these options weigh your goal and recent activity, with lower confidence on today's readiness."
-            : "Garmin data may be out of date — recommendations use your last synced snapshot."}
+          {notice}
         </div>
-      ) : null}
+      ))}
 
       {primary ? (
         <div>
