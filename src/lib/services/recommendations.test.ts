@@ -251,3 +251,61 @@ describe("generateRecommendation — failure taxonomy", () => {
     expect(result.alternatives[0]).not.toHaveProperty("coach_confidence");
   });
 });
+
+/**
+ * PRD l. 90 bounds the whole operation, not each attempt — research 2026-09-11
+ * measured a worst case around three minutes once the SDK's own retries and the
+ * app loop compound. The bound is asserted behaviourally, by how many attempts
+ * the service opened. Measuring elapsed time would test the clock, and naming
+ * the budget constant would pin a number no source fixes.
+ */
+describe("generateRecommendation — the wall-clock budget", () => {
+  /**
+   * Reads zero when the run starts and, from the next reading on, a point far
+   * beyond any budget this service could reasonably adopt. Deliberately not
+   * derived from the budget constant, so retuning it cannot quietly defeat the test.
+   */
+  function clockThatJumpsAfterTheFirstReading(): () => number {
+    let read = false;
+    return () => {
+      if (!read) {
+        read = true;
+        return 0;
+      }
+      return 60 * 60 * 1000; // an hour later
+    };
+  }
+
+  it("opens no further attempt once the budget is spent", async () => {
+    const env = makeRecommendationEnv();
+    // A response the service would normally retry — so opening a second attempt
+    // is precisely what the budget has to prevent here.
+    env.repeat(modelMessage({ alternatives: [] }));
+
+    await expect(
+      generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, {
+        client: env.client,
+        now: clockThatJumpsAfterTheFirstReading(),
+      }),
+    ).rejects.toMatchObject({ name: "LlmError", reason: "timeout" });
+
+    // The first attempt always runs: the budget stops the retry, not the request.
+    expect(env.calls()).toBe(1);
+  });
+
+  it("still retries a rejected response while the budget holds", async () => {
+    const env = makeRecommendationEnv();
+    env.repeat(modelMessage({ alternatives: [] }));
+
+    await expect(
+      generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, {
+        client: env.client,
+        now: () => 0, // time never advances, so the budget can never be spent
+      }),
+    ).rejects.toMatchObject({ name: "LlmError", reason: "invalid_shape" });
+
+    // More than one attempt proves the guard does not fire on a healthy run.
+    // The exact ceiling is MAX_ATTEMPTS' business, not this test's.
+    expect(env.calls()).toBeGreaterThan(1);
+  });
+});

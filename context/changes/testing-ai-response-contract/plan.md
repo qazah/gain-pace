@@ -464,33 +464,33 @@ None. `RecommendationResult.degraded` is a response-only field — `src/componen
 
 #### Automated
 
-- [x] 3.1 Timeout yields reason "timeout"
-- [x] 3.2 Transport error yields reason "transport"
-- [x] 3.3 Refusal yields reason "refusal" without consuming further attempts
-- [x] 3.4 max_tokens response yields reason "truncated"
-- [x] 3.5 Shape drift across every attempt yields reason "invalid_shape"
-- [x] 3.6 Persistent guardrail violation yields reason "implausible"
-- [x] 3.7 Unknown-field leniency pinned
-- [x] 3.8 Lint passes
-- [x] 3.9 Build compiles
+- [x] 3.1 Timeout yields reason "timeout" — d1d0c30
+- [x] 3.2 Transport error yields reason "transport" — d1d0c30
+- [x] 3.3 Refusal yields reason "refusal" without consuming further attempts — d1d0c30
+- [x] 3.4 max_tokens response yields reason "truncated" — d1d0c30
+- [x] 3.5 Shape drift across every attempt yields reason "invalid_shape" — d1d0c30
+- [x] 3.6 Persistent guardrail violation yields reason "implausible" — d1d0c30
+- [x] 3.7 Unknown-field leniency pinned — d1d0c30
+- [x] 3.8 Lint passes — d1d0c30
+- [x] 3.9 Build compiles — d1d0c30
 
 #### Manual
 
-- [ ] 3.10 Invalid API key returns a 502 carrying a reason; UI shows a readable error state
+- [x] 3.10 Invalid API key returns a 502 carrying a reason; UI shows a readable error state — d1d0c30
 
 ### Phase 4: Wall-clock budget
 
 #### Automated
 
-- [ ] 4.1 Past the budget no further attempt is opened; reason "timeout"
-- [ ] 4.2 Within the budget the retry loop still uses all attempts
-- [ ] 4.3 Whole suite passes
-- [ ] 4.4 Lint passes
-- [ ] 4.5 Build compiles
+- [x] 4.1 Past the budget no further attempt is opened; reason "timeout"
+- [x] 4.2 Within the budget the retry loop still uses all attempts
+- [x] 4.3 Whole suite passes
+- [x] 4.4 Lint passes
+- [x] 4.5 Build compiles
 
 #### Manual
 
-- [ ] 4.6 Normal recommendation unaffected in preview
+- [x] 4.6 Normal recommendation unaffected in preview
 
 ### Phase 5: Stryker selective gate
 

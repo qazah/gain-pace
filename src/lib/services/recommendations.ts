@@ -46,10 +46,18 @@ export type AnthropicClient = Pick<Anthropic, "messages">;
  */
 export interface RecommendationDeps {
   client?: AnthropicClient;
+  /** Clock seam, so a test can advance time without waiting. Defaults to `Date.now`. */
+  now?: () => number;
 }
 
 const MODEL = "claude-haiku-4-5";
 const TIMEOUT_MS = 20_000; // per-attempt cap; raised from 9s — a structured, multi-step generation occasionally needs longer
+// Whole-request ceiling (PRD l. 90 bounds the operation, not the attempt). The
+// per-attempt cap above compounds with the SDK's own retries and this loop's
+// re-prompts, which research 2026-09-11 measured at roughly three minutes worst
+// case. This bounds the compounding: a retry is opened only while there is
+// realistic room for it to finish inside a wait a runner will tolerate.
+const TOTAL_BUDGET_MS = 45_000;
 const MAX_TOKENS = 2048; // the structured output is small
 const DAILY_CAP = 10; // soft per-user daily generation cap
 const RANKS = ["primary", "alt_1", "alt_2"] as const;
@@ -283,7 +291,8 @@ export async function generateRecommendation(
   const baseContext =
     buildUserContext(dashboard, goal, modifiers) + (recoveryConflict ? `\n\n${RECOVERY_CONFLICT_INSTRUCTION}` : "");
 
-  const started = Date.now();
+  const now = deps.now ?? Date.now;
+  const started = now();
   let inputTokens = 0;
   let outputTokens = 0;
   let alternatives: WorkoutAlternative[] | null = null;
@@ -296,6 +305,14 @@ export async function generateRecommendation(
   // 3. Up to MAX_ATTEMPTS: one initial call + bounded guardrail re-prompts. The
   // final attempt salvages any individually-valid alternatives (graceful degradation).
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && !alternatives; attempt++) {
+    // Refuse to open another call once the budget is spent, rather than
+    // discovering it after a third 20-second attempt. The first attempt always
+    // runs — a budget that could reject before any call would turn a slow
+    // prerequisite into a silent no-op.
+    if (attempt > 1 && now() - started > TOTAL_BUDGET_MS) {
+      throw new LlmError("Timed out waiting for your recommendation. Please try again.", "timeout");
+    }
+
     const userContent =
       attempt === 1
         ? baseContext
@@ -402,7 +419,7 @@ export async function generateRecommendation(
     JSON.stringify({
       evt: "recommendation",
       userId,
-      latencyMs: Date.now() - started,
+      latencyMs: now() - started,
       inputTokens,
       outputTokens,
       ok: alternatives != null,
