@@ -30,12 +30,15 @@ The moment they reach for this product: they open their watch or app in the morn
 ## Success Criteria
 
 ### Primary
-Runner connects their Garmin account, sets today's modifiers (Time / Intensity / Feeling), receives 3 AI-generated workout alternatives each with a plain-language explanation of what it trades away, and picks one — all within 3 user actions from the modifier screen.
+
+Runner connects their Garmin account, sets today's modifiers (Time / Intensity / Feeling), receives 3 AI-generated workout alternatives (or a smaller set, flagged as reduced, when an option would be implausible), each with a plain-language explanation of what it trades away, and picks one — all within 3 user actions from the modifier screen.
 
 ### Secondary
+
 Each recommendation includes a one-liner about how today's choice affects the runner's long-term training arc — not just what to do, but why it matters in context of recent load and upcoming targets.
 
 ### Guardrails
+
 - AI must not recommend unsafe workloads. Volumes and intensities must stay within a plausible range given the runner's recent training history. Hallucinated loads (e.g., 30km sprint for a 5km/week runner) are a hard regression.
 
 ## User Stories
@@ -44,9 +47,10 @@ Each recommendation includes a one-liner about how today's choice affects the ru
 
 - **Given** a logged-in runner who has connected their Garmin account and defined a race goal
 - **When** they open the app on a training day, set their modifiers (e.g., "30 min / Normal / Tired"), and request alternatives
-- **Then** they see a primary recommended workout card plus 2 alternatives, each with a plain-language explanation referencing their recovery score and race goal, and they can select one as today's committed workout
+- **Then** they see a primary recommended workout card plus up to 2 alternatives — fewer, with the reduction shown, when an option would be implausible — each with a plain-language explanation referencing their recovery score and race goal, and they can select one as today's committed workout
 
 #### Acceptance Criteria
+
 - Primary recommendation is visibly distinct from the 2 alternatives
 - Each option includes at minimum: workout type, estimated duration, and a one-sentence explanation referencing recovery state or goal proximity
 - The whole flow (login → modifiers → recommendation → selection) completes in ≤ 3 user actions on the modifier screen
@@ -57,15 +61,19 @@ Each recommendation includes a one-liner about how today's choice affects the ru
 ### Data & Goal
 
 - FR-001: Runner can connect their Garmin account to the app. Priority: must-have
+
   > Socrates: Counter-argument considered: Garmin's unofficial API is fragile — one server-side change breaks the integration. Resolution: risk accepted; Strava API noted as fallback if Garmin API fails, but Garmin is primary (sleep/recovery data available only there).
 
 - FR-002: App fetches runner's recent workout data from Garmin as AI context (last 3–4 activities + sleep quality, HRV, Body Battery). Priority: must-have
+
   > Socrates: Counter-argument considered: full history UI adds frontend work without improving recommendation quality. Resolution: FR split — fetch is must-have; UI display of history for the runner is nice-to-have (see FR-002b).
 
 - FR-002b: Runner can view their recent training history pulled from Garmin. Priority: nice-to-have
+
   > Socrates: Demoted from must-have based on Socrates round — AI context fetch (FR-002) is the load-bearing piece; history UI is a UX enhancement.
 
 - FR-003: Runner can view today's scheduled workout from their Garmin plan. Priority: must-have
+
   > Socrates: Counter-argument considered: Garmin plan data may not be accessible via unofficial API; runner may not use Garmin Coach at all. Resolution: stands as written — the product's core framing is adapting a scheduled workout; if no plan exists, this is surfaced as an Open Question.
 
 - FR-008: Runner can define a long-term race goal (event name, date, distance, target finish time). Priority: must-have
@@ -74,15 +82,18 @@ Each recommendation includes a one-liner about how today's choice affects the ru
 ### Modification & Recommendation
 
 - FR-004: Runner can set today's modifiers (Time available / Intensity preference / Feeling). Priority: must-have
+
   > Socrates: Counter-argument considered: modifiers may be redundant if Garmin's recovery score already tells the AI the runner's state. Resolution: Time modifier is irreducible — Garmin cannot know about a meeting that cuts the run short. Feeling and Intensity overlap with recovery data but capture explicit intent that sensor data alone cannot. All 3 kept.
 
-- FR-005: Runner receives a primary AI-recommended workout card plus 2 alternatives ("if you prefer"), each with a plain-language explanation grounded in current recovery and active modifiers. Priority: must-have
+- FR-005: Runner receives a primary AI-recommended workout card plus up to 2 alternatives ("if you prefer"), each with a plain-language explanation grounded in current recovery and active modifiers. When an option would be implausible it is dropped and the smaller set ships flagged as reduced, rather than the request failing. Priority: must-have
+
   > Socrates: Counter-argument considered: 3 equal options create paradox of choice. Resolution: UX reframed — primary card is the AI recommendation, 2 alternatives shown below with "if you prefer" framing. Same data, less decision friction.
 
 - FR-006: Runner can see how each alternative affects their training arc toward the defined race goal. Priority: must-have
+
   > Socrates: No counter-argument — contextual explanation relative to a goal is the core differentiator. Even approximate LLM reasoning beats zero context.
 
-- FR-007: Runner can select one of the 3 alternatives as today's workout. Priority: must-have
+- FR-007: Runner can select one of the alternatives shipped — 3, or fewer when the set was reduced — as today's workout. Priority: must-have
   > Socrates: Counter-argument considered: selection is informational only in MVP — no push to Garmin watch; runner must recall it manually. Resolution: limitation accepted; the selection closes the decision loop and logs the commitment. Garmin .fit write-back is post-MVP.
 
 ## Non-Functional Requirements
@@ -92,9 +103,10 @@ Each recommendation includes a one-liner about how today's choice affects the ru
 
 ## Business Logic
 
-The app selects and ranks 3 workout alternatives for today by weighing the runner's recent training load, current recovery state, defined race goal, and expressed modifiers — and identifies which alternative best fits the runner's current day.
+The app selects and ranks up to 3 workout alternatives for today by weighing the runner's recent training load, current recovery state, defined race goal, and expressed modifiers — and identifies which alternative best fits the runner's current day. An alternative that fails the plausibility rules above is dropped rather than shipped; the runner is told the set was reduced.
 
 **Inputs the rule consumes:**
+
 - Last 3–4 completed workouts from Garmin (distance, pace, heart rate)
 - Last night's recovery metrics from Garmin: sleep quality, HRV, Body Battery
 - Today's runner-set modifiers: time available, intensity preference, self-reported feeling

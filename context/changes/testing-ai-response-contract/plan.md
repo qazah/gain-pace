@@ -496,25 +496,25 @@ None. `RecommendationResult.degraded` is a response-only field — `src/componen
 
 #### Automated
 
-- [x] 5.1 Mutation run completes against the two-module scope
-- [x] 5.2 Suite still green after any added assertions
-- [x] 5.3 Lint passes
+- [x] 5.1 Mutation run completes against the two-module scope — 6e5580e
+- [x] 5.2 Suite still green after any added assertions — 6e5580e
+- [x] 5.3 Lint passes — 6e5580e
 
 #### Manual
 
-- [x] 5.4 Every survived mutant has an explicit verdict — killed or ignored with a reason
-- [x] 5.5 No added assertion pins a guardrail threshold constant
+- [x] 5.4 Every survived mutant has an explicit verdict — killed or ignored with a reason — 6e5580e
+- [x] 5.5 No added assertion pins a guardrail threshold constant — 6e5580e
 
 ### Phase 6: Docs, prompt and cookbook
 
 #### Automated
 
-- [ ] 6.1 Whole suite passes
-- [ ] 6.2 Lint passes
-- [ ] 6.3 Build compiles
+- [x] 6.1 Whole suite passes
+- [x] 6.2 Lint passes
+- [x] 6.3 Build compiles
 
 #### Manual
 
-- [ ] 6.4 PRD no longer contradicts the shipped degradation contract
-- [ ] 6.5 §6.1 is specific enough to write Phase 2 from
-- [ ] 6.6 §3 Phase 1 Status reads shipped
+- [x] 6.4 PRD no longer contradicts the shipped degradation contract
+- [x] 6.5 §6.1 is specific enough to write Phase 2 from
+- [x] 6.6 §3 Phase 1 Status reads shipped

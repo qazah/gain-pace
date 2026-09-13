@@ -161,6 +161,20 @@ async function bumpTodayCount(supabase: TypedSupabase, userId: string, current: 
 
 // ---- Prompt ----
 
+// Two different contracts, deliberately not the same one:
+//
+//   GENERATION — what we ask the model for. This prompt's "exactly 3" and the
+//   Zod `.length(3)` on the response are both part of it. We keep asking for
+//   three: a model given room to return fewer will take it, and the salvage
+//   path below is a safety net, not a target.
+//
+//   SHIPPING — what reaches the runner. That set may be smaller, because an
+//   alternative that fails a guardrail is dropped rather than shipped, and the
+//   result then carries `degraded` so the UI can say the set was reduced
+//   (PRD l. 79, l. 95).
+//
+// Relaxing the generation contract to match the shipping one would remove the
+// pressure that produces three good options in the first place.
 const SYSTEM_PROMPT = [
   "You are a running coach that adapts today's workout to the runner's real state.",
   "You will receive the runner's recent activities, last night's recovery metrics, their race goal, and today's modifiers (time available, intensity preference, how they feel).",
