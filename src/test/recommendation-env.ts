@@ -141,6 +141,9 @@ function reply(body: Record<string, unknown>): Response {
   return { ok: true, status: 200, json: () => Promise.resolve(body) } as unknown as Response;
 }
 
+/** What the service actually asked the model for. */
+export type ModelRequest = Anthropic.Messages.MessageCreateParams;
+
 export interface RecommendationEnv {
   supabase: TypedSupabase;
   store: SessionStore;
@@ -156,6 +159,8 @@ export interface RecommendationEnv {
   repeat: (item: Anthropic.Message | Error) => void;
   /** How many model calls were made. */
   calls: () => number;
+  /** Every request body the service sent, in order. */
+  requests: ModelRequest[];
   /** Rows written to recommendation_usage (the daily-cap bump). */
   usageUpserts: Record<string, unknown>[];
   /** Snapshots the dashboard fetch persisted through the store. */
@@ -228,12 +233,14 @@ export function makeRecommendationEnv(options: EnvOptions = {}): RecommendationE
   } as unknown as TypedSupabase;
 
   const queued: (Anthropic.Message | Error)[] = [];
+  const requests: ModelRequest[] = [];
   let repeated: Anthropic.Message | Error | null = null;
   let calls = 0;
   const client = {
     messages: {
-      create: () => {
+      create: (body: ModelRequest) => {
         calls++;
+        requests.push(body);
         const next = queued.shift() ?? repeated;
         if (!next) return Promise.reject(new Error("no model response queued for this attempt"));
         return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
@@ -250,6 +257,7 @@ export function makeRecommendationEnv(options: EnvOptions = {}): RecommendationE
       repeated = item;
     },
     calls: () => calls,
+    requests,
     usageUpserts,
     snapshots,
   };

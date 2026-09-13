@@ -3,6 +3,7 @@ import { generateRecommendation } from "./recommendations";
 import { APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import { LlmError } from "./recommendations";
 import { makeRecommendationEnv, modelMessage, modelPayload, VALID_ALTERNATIVES } from "@/test/recommendation-env";
+import type { ModelRequest } from "@/test/recommendation-env";
 
 /**
  * Contract tests for the recommendation service (test-plan §3 Phase 1).
@@ -47,6 +48,13 @@ describe("generateRecommendation — the shipped set", () => {
     expect(result.alternatives).toHaveLength(3);
     expect(result.alternatives.map((a) => a.rank)).toEqual(["primary", "alt_1", "alt_2"]);
     expect(env.calls()).toBe(1);
+
+    // The context travels back to the select endpoint and is persisted with the
+    // chosen workout; losing it strands the saved session from its goal.
+    expect(result.context).toMatchObject({
+      race_goal_id: "goal-1",
+      modifiers: { time_available_minutes: 60 },
+    });
   });
 
   it("carries each option's type, duration, explanation and structured detail", async () => {
@@ -144,6 +152,29 @@ describe("generateRecommendation — degradation contract", () => {
     expect(result.alternatives).toHaveLength(1);
     expect(result.alternatives[0].rank).toBe("primary");
     expect(result.degraded).toBe(1);
+  });
+
+  it("drops an option whose steps do not add up, even while salvaging", async () => {
+    const env = makeRecommendationEnv();
+    // Total duration is plausible (40 min against a ~40 min median), so the LOAD
+    // guardrail passes it; only the structure check can catch that the steps sum
+    // to 10. S-05 / PRD l. 53: a prescription whose parts contradict its stated
+    // length is not a workout the runner can follow.
+    const stepsDoNotSum = {
+      ...VALID_ALTERNATIVES[0],
+      workout_type: "Mismatched steps",
+      duration_minutes: 40,
+      steps: [{ effort: "easy", duration_minutes: 10, target_pace: "6:00" }],
+    };
+    env.repeat(modelMessage(modelPayload([VALID_ALTERNATIVES[0], VALID_ALTERNATIVES[1], stepsDoNotSum])));
+
+    const result = await generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client });
+
+    // Both guardrails must keep filtering while the set is being salvaged, not
+    // only on the clean path.
+    expect(result.alternatives).toHaveLength(2);
+    expect(result.degraded).toBe(2);
+    expect(result.alternatives.map((a) => a.workout_type)).not.toContain("Mismatched steps");
   });
 
   it("leaves the marker unset when all three options are plausible", async () => {
@@ -307,5 +338,57 @@ describe("generateRecommendation — the wall-clock budget", () => {
     // More than one attempt proves the guard does not fire on a healthy run.
     // The exact ceiling is MAX_ATTEMPTS' business, not this test's.
     expect(env.calls()).toBeGreaterThan(1);
+  });
+});
+
+/**
+ * What we ask the model for is part of the contract, not an internal detail:
+ * Risk #1 (test-plan §2) is a parse failure that leaves the runner with an
+ * error instead of three options, and it reached production on 2026-09-13.
+ * These two assertions exist because the Stryker run of Phase 5 showed the
+ * request body was entirely unguarded — `create({})` survived.
+ */
+/** The prompt text of a recorded request; the service sends plain text. */
+function promptOf(request: ModelRequest): string {
+  const { content } = request.messages[0];
+  if (typeof content !== "string") {
+    throw new Error("expected a plain-text prompt, got structured content");
+  }
+  return content;
+}
+
+describe("generateRecommendation — what we ask the model for", () => {
+  it("asks for structured output against the recommendation schema", async () => {
+    const env = makeRecommendationEnv();
+    env.queue(modelMessage(modelPayload()));
+
+    await generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client });
+
+    // Without the schema the model may answer in prose, and every attempt then
+    // fails the parse — the runner sees a 502, not a recommendation.
+    expect(env.requests[0]).toMatchObject({
+      output_config: { format: { type: "json_schema" } },
+      messages: [{ role: "user" }],
+    });
+    expect(env.requests[0].system).toBeTruthy();
+  });
+
+  it("tells the model what was rejected when it asks again", async () => {
+    const env = makeRecommendationEnv();
+    env.repeat(modelMessage({ alternatives: [] }));
+
+    await expect(
+      generateRecommendation(env.supabase, "u1", env.store, MODIFIERS, { client: env.client }),
+    ).rejects.toMatchObject({ name: "LlmError" });
+
+    // A retry that repeats the first prompt verbatim is not a retry: the model
+    // has been given no reason to answer any differently.
+    const [first, second] = env.requests;
+    expect(promptOf(second)).not.toEqual(promptOf(first));
+    expect(promptOf(second).length).toBeGreaterThan(promptOf(first).length);
+    // ...and the opening ask is not itself a re-prompt: telling the model its
+    // previous answer was rejected before it has given one is nonsense input
+    // on every single request.
+    expect(promptOf(first)).not.toContain("was rejected");
   });
 });

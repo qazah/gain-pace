@@ -482,28 +482,28 @@ None. `RecommendationResult.degraded` is a response-only field — `src/componen
 
 #### Automated
 
-- [x] 4.1 Past the budget no further attempt is opened; reason "timeout"
-- [x] 4.2 Within the budget the retry loop still uses all attempts
-- [x] 4.3 Whole suite passes
-- [x] 4.4 Lint passes
-- [x] 4.5 Build compiles
+- [x] 4.1 Past the budget no further attempt is opened; reason "timeout" — 78a83d9
+- [x] 4.2 Within the budget the retry loop still uses all attempts — 78a83d9
+- [x] 4.3 Whole suite passes — 78a83d9
+- [x] 4.4 Lint passes — 78a83d9
+- [x] 4.5 Build compiles — 78a83d9
 
 #### Manual
 
-- [x] 4.6 Normal recommendation unaffected in preview
+- [x] 4.6 Normal recommendation unaffected in preview — 78a83d9
 
 ### Phase 5: Stryker selective gate
 
 #### Automated
 
-- [ ] 5.1 Mutation run completes against the two-module scope
-- [ ] 5.2 Suite still green after any added assertions
-- [ ] 5.3 Lint passes
+- [x] 5.1 Mutation run completes against the two-module scope
+- [x] 5.2 Suite still green after any added assertions
+- [x] 5.3 Lint passes
 
 #### Manual
 
-- [ ] 5.4 Every survived mutant has an explicit verdict — killed or ignored with a reason
-- [ ] 5.5 No added assertion pins a guardrail threshold constant
+- [x] 5.4 Every survived mutant has an explicit verdict — killed or ignored with a reason
+- [x] 5.5 No added assertion pins a guardrail threshold constant
 
 ### Phase 6: Docs, prompt and cookbook
 
